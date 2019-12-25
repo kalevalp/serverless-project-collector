@@ -1,0 +1,23 @@
+{
+  "name": "serverless-project-collector",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kalevalp/serverless-project-collector.git"
+  },
+  "author": "Kalev Alpernas <kalev.alp@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kalevalp/serverless-project-collector/issues"
+  },
+  "homepage": "https://github.com/kalevalp/serverless-project-collector#readme",
+  "dependencies": {
+    "aws-sdk": "^2.596.0",
+    "axios": "^0.19.0"
+  }
+}
