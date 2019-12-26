@@ -25,11 +25,22 @@ const topics = [
     'aws-lambda',
 ];
 
+function getTimestampString() {
+    const d = new Date();
+
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDay()}-${d.getHours()}${d.getMinutes()}${d.getSeconds()}`;
+}
+
 const language = 'js';
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+const requestHeaders = {
+    'Accept': 'application/vnd.github.v3+json',
+    'Authorization': `token ${githubToken}`,
+};
 
 async function main() {
 
@@ -66,10 +77,7 @@ async function main() {
 	url: 'search/repositories',
 	method: 'get',
 	baseURL: 'https://api.github.com',
-	headers: {
-	    'Accept': 'application/vnd.github.v3+json',
-	    'Authorization': `token ${githubToken}`,
-	},
+	headers: requestHeaders,
 	params: {
 	    'q': 'topic:serverless language:js',
 	    'sort': 'stars',
@@ -85,15 +93,6 @@ async function main() {
     let response;
 
     response = await makeSearchCall(request);
-    try {
-	response = await axios(request);
-
-	searchRateLimitRemaining = Number(response.headers['x-ratelimit-remaining']);
-	searchRatelimitReset = Number(response.headers['x-ratelimit-reset']) ;
-
-    } catch (err) {
-	console.error(err);
-    }
 
     const maxBucketSize = 1000;
     const totalResults = response.data.total_count;
@@ -122,20 +121,7 @@ Initial call to search.
 
     	while (currBucketSize < minBucketSize || currBucketSize > maxBucketSize) {
     	    request.params.q = `topic:serverless language:js stars:${min}..${loc}`;
-    	    try {
-    		if (searchRateLimitRemaining < 5) {
-    		    const timeToSleep = searchRatelimitReset*1000-Date.now();
-    		    console.log(`Nearing the edge of allowed rate. Current remaining allowed calls: ${searchRateLimitRemaining}. Sleeping until rate resets, ${timeToSleep}ms.`);
-    		    await sleep(timeToSleep);
-    		}
-    		response = await axios(request);
-
-    		searchRateLimitRemaining = Number(response.headers['x-ratelimit-remaining']);
-    		searchRatelimitReset = Number(response.headers['x-ratelimit-reset']) ;
-    	    } catch (err) {
-    		console.error(err);
-    		return false;
-    	    }
+	    response = await makeSearchCall(request);
 
     	    currBucketSize = response.data.total_count;
 
@@ -150,11 +136,9 @@ Initial call to search.
     	    }
     	}
     	delimiters.splice(i+1,0,loc+1)
-
-    	console.log(delimiters);
     }
 
-    const delimiters = [ 0, 1, 18, 33587 ];
+    console.log(`Bucket delimiters: ${delimiters}`)
 
     // Step 3: Collect all repos
 
@@ -162,20 +146,7 @@ Initial call to search.
     	const minStars = delimiters[i], maxStars = delimiters[i+1]-1;
     	request.params.q = `topic:serverless language:js stars:${minStars}..${maxStars}`;
 
-    	try {
-    	    if (searchRateLimitRemaining < 5) {
-    		const timeToSleep = searchRatelimitReset*1000-Date.now();
-    		console.log(`Nearing the edge of allowed rate. Current remaining allowed calls: ${searchRateLimitRemaining}. Sleeping until rate resets, ${timeToSleep}ms.`);
-    		await sleep(timeToSleep);
-    	    }
-    	    response = await axios(request);
-
-    	    searchRateLimitRemaining = Number(response.headers['x-ratelimit-remaining']);
-    	    searchRatelimitReset = Number(response.headers['x-ratelimit-reset']) ;
-    	} catch (err) {
-    	    console.error(err);
-    	    return false;
-    	}
+	response = await makeSearchCall(request);
 
     	console.log(`Ran request for star range ${minStars}..${maxStars}. Got ${response.data.total_count} results.`);
 
@@ -187,29 +158,14 @@ Initial call to search.
     	while (nextCallLink && nextCallLink.match(linkRegex)) {
     	    const nextPageLink = nextCallLink.match(linkRegex)[1];
 
-    	    if (searchRateLimitRemaining < 5) {
-    		const timeToSleep = searchRatelimitReset*1000-Date.now();
-    		console.log(`Nearing the edge of allowed rate. Current remaining allowed calls: ${searchRateLimitRemaining}. Sleeping until rate resets, ${timeToSleep}ms.`);
-    		await sleep(timeToSleep);
-    	    }
-
-    	    const nextPageRequest = {
+	    const nextPageRequest = {
     		url: nextPageLink,
     		method: 'get',
-    		headers: {
-    		    'Accept': 'application/vnd.github.v3+json',
-    		    'Authorization': `token ${githubToken}`,
-    		},
+    		headers: requestHeaders,
     	    }
-    	    try {
-    		response = await axios(nextPageRequest);
 
-    		searchRateLimitRemaining = Number(response.headers['x-ratelimit-remaining']);
-    		searchRatelimitReset = Number(response.headers['x-ratelimit-reset']) ;
-    	    } catch (err) {
-    		console.error(err);
-    		return false;
-    	    }
+	    response = await makeSearchCall(nextPageRequest);
+
     	    nextCallLink = response.headers.link;
 
     	    repos = repos.concat(response.data.items);
@@ -219,88 +175,63 @@ Initial call to search.
 
     console.log(`Finished collecting repos. Total of ${repos.length} repos, out of an expected ${totalResults} repos.`);
 
-    console.log('Writing to file...');
-    fs.writeFileSync('repos.json', JSON.stringify(repos));
+    console.log('Writing all collected repos to file...');
+    fs.writeFileSync(`all-repos-${getTimestampString()}.json`, JSON.stringify(repos));
     console.log('Done.');
-
-    console.log('Reading repos from file...');
-    repos = JSON.parse(fs.readFileSync('repos.json'));
-    console.log('Done.');
-
-    // console.log(repos[0]);
 
     // Step 4: Iterate over repo. Only keep repos that have a serverless.yml file. Download the serverless.yml file.
+
+    const slsRepos = [];
+    const yamlFiles = {};
 
     for (const repo of repos) {
     	request = {
     	    url: 'search/code',
     	    method: 'get',
     	    baseURL: 'https://api.github.com',
-    	    headers: {
-    		'Accept': 'application/vnd.github.v3+json',
-    		'Authorization': `token ${githubToken}`,
-    	    },
+    	    headers: requestHeaders,
     	    params: {
     		'q': `filename:serverless.yml repo:${repo.full_name}`,
     		'per_page': 100,
     	    },
     	}
 
-	try {
-	    if (searchRateLimitRemaining < 5) {
-    		const timeToSleep = searchRatelimitReset*1000-Date.now();
-    		console.log(`Nearing the edge of allowed rate. Current remaining allowed calls: ${searchRateLimitRemaining}. Sleeping until rate resets, ${timeToSleep}ms.`);
-    		await sleep(timeToSleep);
-    	    }
-
-	    response = await axios(request);
-
-	    searchRateLimitRemaining = Number(response.headers['x-ratelimit-remaining']);
-	    searchRatelimitReset = Number(response.headers['x-ratelimit-reset']) ;
-
-	} catch (err) {
-	    console.error(err);
-	}
+	response = await makeSearchCall(request);
 
 	if (response.data.total_count > 0) {
-	    console.log(`YES! Repo ${repo.full_name} (${repo.html_url}) contains a serverless.yml file.`)
-	} else {
-	    console.log(`no.. Repo ${repo.full_name} (${repo.html_url}) does not contain a serverless.yml file.`)
+	    slsRepos.push(repo);
+
+	    const repoYamlFiles = [];
+
+	    const fileUrlList = response.data.items.map(item => item.git_url);
+
+	    for (const fileUrl of fileUrlList) {
+    		const fileRequest = {
+    		    url: fileUrl,
+    		    method: 'get',
+    		    headers: requestHeaders,
+    		}
+
+		response = await makeAPICall(fileRequest);
+
+    		const slsConf = yaml.safeLoad(Buffer.from(response.data.content, response.data.encoding).toString());
+		repoYamlFiles.push(slsConf);
+	    }
+
+	    yamlFiles.id = repo.id;
+	    yamlFiles.files = repoYamlFiles;
 	}
-
     }
 
-    const blobUrlList = response.data.items.map(item => item.git_url);
+    console.log(`${slsRepos.length} repos contain serverless.yml files, out of a total of ${repos.length}.`);
 
-    for (const blobUrl of blobUrlList) {
-    	const blobRequest = {
-    	    url: blobUrl,
-    	    method: 'get',
-    	    headers: {
-    		'Accept': 'application/vnd.github.v3+json',
-    		'Authorization': `token ${githubToken}`,
-    	    },
-    	}
+    console.log('Writing sls repos to file...');
+    fs.writeFileSync(`sls-repos-${getTimestampString()}.json`, JSON.stringify(slsRepos));
+    console.log('Done.');
 
-    	try {
-    	    if (apiRateLimitRemaining < 50) {
-    		const timeToSleep = apiRatelimitReset*1000-Date.now();
-    		console.log(`Nearing the edge of allowed rate. Current remaining allowed API calls: ${apiRateLimitRemaining}. Sleeping until rate resets, ${timeToSleep}ms.`);
-    		await sleep(timeToSleep);
-    	    }
-
-    	    response = await axios(blobRequest);
-
-    	    apiRateLimitRemaining = Number(response.headers['x-ratelimit-remaining']);
-    	    apiRatelimitReset = Number(response.headers['x-ratelimit-reset']) ;
-
-    	} catch (err) {
-    	    console.error(err);
-    	}
-
-    	const slsConf = yaml.safeLoad(Buffer.from(response.data.content, response.data.encoding).toString());
-	console.log(slsConf);
-    }
+    console.log('Writing conf file mapping to file...');
+    fs.writeFileSync(`yaml-file-mapping-${getTimestampString()}.json`, JSON.stringify(yamlFiles));
+    console.log('Done.');
 }
 
 main();
