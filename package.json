@@ -18,6 +18,7 @@
   "homepage": "https://github.com/kalevalp/serverless-project-collector#readme",
   "dependencies": {
     "aws-sdk": "^2.596.0",
-    "axios": "^0.19.0"
+    "axios": "^0.19.0",
+    "js-yaml": "^3.13.1"
   }
 }
