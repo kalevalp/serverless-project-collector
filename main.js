@@ -44,10 +44,9 @@ const requestHeaders = {
 
 async function main() {
 
-    let searchRateLimitRemaining, searchRatelimitReset;
-    let apiRateLimitRemaining, apiRatelimitReset;
+    function httpCallerBuilder(threshold) {
+	let rateLimitRemaining, rateLimitReset;
 
-    function httpCallerBuilder(rateLimitRemaining, rateLimitReset, threshold) {
 	return async function makeHttpCall(request) {
     	    try {
     		if (rateLimitRemaining < threshold) {
@@ -68,8 +67,8 @@ async function main() {
 	}
     }
 
-    const makeSearchCall = httpCallerBuilder(searchRateLimitRemaining, searchRatelimitReset, 5);
-    const makeAPICall = httpCallerBuilder(apiRateLimitRemaining, apiRateLimitReset, 50);
+    const makeSearchCall = httpCallerBuilder(5);
+    const makeAPICall = httpCallerBuilder(50);
 
     let repos = [];
 
