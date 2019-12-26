@@ -89,15 +89,14 @@ async function main() {
 
     // Step 1: Determine the total number of elements, and all derived info
 
-    let response;
 
-    response = await makeSearchCall(request);
+    const step1response = await makeSearchCall(request);
 
     const maxBucketSize = 1000;
-    const totalResults = response.data.total_count;
+    const totalResults = step1response.data.total_count;
     const buckets = Math.ceil(totalResults/maxBucketSize);
     const minBucketSize = Math.ceil(totalResults/buckets);
-    const maxStars = response.data.items[0].stargazers_count;
+    const maxStars = step1response.data.items[0].stargazers_count;
 
     console.log(
 `
@@ -120,9 +119,9 @@ Initial call to search.
 
     	while (currBucketSize < minBucketSize || currBucketSize > maxBucketSize) {
     	    request.params.q = `topic:serverless language:js stars:${min}..${loc}`;
-	    response = await makeSearchCall(request);
+	    const step2response = await makeSearchCall(request);
 
-    	    currBucketSize = response.data.total_count;
+    	    currBucketSize = step2response.data.total_count;
 
     	    console.log(`Ran request for star range ${min}..${loc}. Got ${currBucketSize} results.`);
 
@@ -145,14 +144,14 @@ Initial call to search.
     	const minStars = delimiters[i], maxStars = delimiters[i+1]-1;
     	request.params.q = `topic:serverless language:js stars:${minStars}..${maxStars}`;
 
-	response = await makeSearchCall(request);
+	const step3firstresponse = await makeSearchCall(request);
 
-    	console.log(`Ran request for star range ${minStars}..${maxStars}. Got ${response.data.total_count} results.`);
+    	console.log(`Ran request for star range ${minStars}..${maxStars}. Got ${step3firstresponse.data.total_count} results.`);
 
-    	repos = repos.concat(response.data.items);
+    	repos = repos.concat(step3firstresponse.data.items);
     	console.log(`Collected ${repos.length} repos.`);
 
-    	let nextCallLink = response.headers.link;
+    	let nextCallLink = step3firstresponse.headers.link;
 
     	while (nextCallLink && nextCallLink.match(linkRegex)) {
     	    const nextPageLink = nextCallLink.match(linkRegex)[1];
@@ -163,11 +162,11 @@ Initial call to search.
     		headers: requestHeaders,
     	    }
 
-	    response = await makeSearchCall(nextPageRequest);
+	    const step3response = await makeSearchCall(nextPageRequest);
 
-    	    nextCallLink = response.headers.link;
+    	    nextCallLink = step3response.headers.link;
 
-    	    repos = repos.concat(response.data.items);
+    	    repos = repos.concat(step3response.data.items);
     	    console.log(`Collected ${repos.length} repos.`);
     	}
     }
@@ -195,14 +194,14 @@ Initial call to search.
     	    },
     	}
 
-	response = await makeSearchCall(request);
+	const step4firstresponse = await makeSearchCall(request);
 
-	if (response.data.total_count > 0) {
+	if (step4firstresponse.data.total_count > 0) {
 	    slsRepos.push(repo);
 
 	    const repoYamlFiles = [];
 
-	    const fileUrlList = response.data.items.map(item => item.git_url);
+	    const fileUrlList = step4firstresponse.data.items.map(item => item.git_url);
 
 	    for (const fileUrl of fileUrlList) {
     		const fileRequest = {
@@ -211,9 +210,9 @@ Initial call to search.
     		    headers: requestHeaders,
     		}
 
-		response = await makeAPICall(fileRequest);
+		const step4response = await makeAPICall(fileRequest);
 
-    		const slsConf = yaml.safeLoad(Buffer.from(response.data.content, response.data.encoding).toString());
+    		const slsConf = yaml.safeLoad(Buffer.from(step4response.data.content, step4response.data.encoding).toString());
 		repoYamlFiles.push(slsConf);
 	    }
 
