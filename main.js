@@ -2,19 +2,20 @@ const axios = require('axios');
 const aws = require('aws-sdk');
 const fs = require('fs');
 const yaml = require('js-yaml');
+const cliProgress = require('cli-progress');
 
 const githubToken = process.env.GITHUB_API_TOKEN;
 const verbose = process.env.PROJECT_COLLECTOR_VERBOSE;
 
 if (verbose) {
     axios.interceptors.request.use(request => {
-	console.log('Starting Request', axios.getUri(request));
-	return request;
+        console.log('Starting Request', axios.getUri(request));
+        return request;
     });
 
     // axios.interceptors.response.use(response => {
-    // 	console.log('Response:', response)
-    // 	return response
+    //  console.log('Response:', response)
+    //  return response
     // })
 }
 
@@ -45,191 +46,244 @@ const requestHeaders = {
 async function main() {
 
     function httpCallerBuilder(threshold) {
-	let rateLimitRemaining, rateLimitReset;
+        let rateLimitRemaining, rateLimitReset;
 
-	return async function makeHttpCall(request) {
-    	    try {
-    		if (rateLimitRemaining < threshold) {
-    		    const timeToSleep = ratelimitReset*1000-Date.now();
-    		    console.log(`Nearing the edge of allowed rate. Current remaining allowed calls: ${rateLimitRemaining}. Sleeping until rate resets, ${timeToSleep}ms.`);
-    		    await sleep(timeToSleep);
-    		}
-    		const response = await axios(request);
+        return async function makeHttpCall(request) {
+            try {
+                if (rateLimitRemaining < threshold) {
+                    const timeToSleep = ratelimitReset*1000-Date.now();
+                    console.log(`Nearing the edge of allowed rate. Current remaining allowed calls: ${rateLimitRemaining}. Sleeping until rate resets, ${timeToSleep}ms.`);
+                    await sleep(timeToSleep);
+                }
+                const response = await axios(request);
 
-    		rateLimitRemaining = Number(response.headers['x-ratelimit-remaining']);
-    		ratelimitReset = Number(response.headers['x-ratelimit-reset']) ;
+                rateLimitRemaining = Number(response.headers['x-ratelimit-remaining']);
+                ratelimitReset = Number(response.headers['x-ratelimit-reset']) ;
 
-		return response;
-    	    } catch (err) {
-    		console.error(err);
-		process.exit(1);
-    	    }
-	}
+                return response;
+            } catch (err) {
+                console.error(err);
+                process.exit(1);
+            }
+        }
     }
 
     const makeSearchCall = httpCallerBuilder(5);
     const makeAPICall = httpCallerBuilder(50);
 
-    let repos = [];
+    /* ******************************************************** *
+     * Initial call to the search API.
+     *   Determine the total number of elements in the search,
+     *   and derive the number of buckets, and the size bounds
+     *   of each bucket.
+     * ******************************************************** */
+    async function getSearchBounds(topic = 'serverless', lang = 'js') {
+        const request = {
+            url: 'search/repositories',
+            method: 'get',
+            baseURL: 'https://api.github.com',
+            headers: requestHeaders,
+            params: {
+                'q': `topic:${topic} language:${lang}`,
+                'sort': 'stars',
+                'order': 'desc',
+                'per_page': 100,
+            },
+        }
 
-    let request = {
-	url: 'search/repositories',
-	method: 'get',
-	baseURL: 'https://api.github.com',
-	headers: requestHeaders,
-	params: {
-	    'q': 'topic:serverless language:js',
-	    'sort': 'stars',
-	    'order': 'desc',
-	    'per_page': 100,
-	},
-    }
+        const linkRegex = /<(.*)>; rel="next"/;
 
-    const linkRegex = /<(.*)>; rel="next"/;
+        const response = await makeSearchCall(request);
 
-    // Step 1: Determine the total number of elements, and all derived info
+        const res = {
+             maxBucketSize: 1000,
+             totalResults: response.data.total_count,
+             buckets: Math.ceil(totalResults/maxBucketSize),
+             minBucketSize: Math.ceil(totalResults/buckets),
+             maxStars: response.data.items[0].stargazers_count,
+        };
 
-
-    const step1response = await makeSearchCall(request);
-
-    const maxBucketSize = 1000;
-    const totalResults = step1response.data.total_count;
-    const buckets = Math.ceil(totalResults/maxBucketSize);
-    const minBucketSize = Math.ceil(totalResults/buckets);
-    const maxStars = step1response.data.items[0].stargazers_count;
-
-    console.log(
-`
+        console.log(
+            `
 Initial call to search.
-  Got ${totalResults} results.
-  Should split into ${buckets} buckets, sized [${minBucketSize}..${maxBucketSize}].
-  The project with the most stars has ${maxStars} stars.
+  Got ${res.totalResults} results.
+  Should split into ${res.buckets} buckets, sized [${res.minBucketSize}..${res.maxBucketSize}].
+  The project with the most stars has ${res.maxStars} stars.
 `);
-
-    // Step 2: Split into buckets
-    // There are several edge cases I'm not handling at the moment. Will handle if encountered.
-    //   1. star range singleton sized too big for bucket
-    //   2. star range of singleton too small for bucket, whereas star range of size 2 too big for bucket.
-    const delimiters = [0, maxStars+1]; // Delimiters form ranges of [from..to) (including from, excluding to).
-    for (let i = 0; i < buckets-1; i++) {
-    	const min = delimiters[i], max = delimiters[i+1]-1;
-    	let latestMin = min, latestMax = max;
-    	let loc = Math.ceil((max+min)/2);
-    	let currBucketSize = 0;
-
-    	while (currBucketSize < minBucketSize || currBucketSize > maxBucketSize) {
-    	    request.params.q = `topic:serverless language:js stars:${min}..${loc}`;
-	    const step2response = await makeSearchCall(request);
-
-    	    currBucketSize = step2response.data.total_count;
-
-    	    console.log(`Ran request for star range ${min}..${loc}. Got ${currBucketSize} results.`);
-
-    	    if (currBucketSize > maxBucketSize) {
-    		latestMax = loc;
-    		loc = Math.floor((latestMin+loc)/2);
-    	    } else if (currBucketSize < minBucketSize) {
-    		latestMin = loc;
-    		loc = Math.ceil((loc+latestMax)/2);
-    	    }
-    	}
-    	delimiters.splice(i+1,0,loc+1)
+        return res;
     }
 
-    console.log(`Bucket delimiters: ${delimiters}`)
+    /* *************************************************************** *
+     *  Split into buckets
+     *   There are several edge cases I'm not handling at the
+     *   moment. Will handle if encountered.
+     *     1. star range singleton sized too big for bucket
+     *     2. star range of singleton too small for bucket, whereas star
+     *        range of size 2 too big for bucket.
+     * *************************************************************** */
+    async function findBucketDelimiters(searchBounds, topic = 'serverless', lang = 'js') {
+        const request = {
+            url: 'search/repositories',
+            method: 'get',
+            baseURL: 'https://api.github.com',
+            headers: requestHeaders,
+            params: {
+                'sort': 'stars',
+                'order': 'desc',
+                'per_page': 100,
+            },
+        }
 
-    // Step 3: Collect all repos
+        const {maxStars, buckets, minBucketSize, maxBucketSize} = searchBounds;
 
-    for (let i = 0; i < buckets; i++) {
-    	const minStars = delimiters[i], maxStars = delimiters[i+1]-1;
-    	request.params.q = `topic:serverless language:js stars:${minStars}..${maxStars}`;
+        const delimiters = [0, maxStars+1]; // Delimiters form ranges of [from..to) (including from, excluding to).
+        for (let i = 0; i < buckets-1; i++) {
+            const min = delimiters[i], max = delimiters[i+1]-1;
+            let latestMin = min, latestMax = max;
+            let loc = Math.ceil((max+min)/2);
+            let currBucketSize = 0;
 
-	const step3firstresponse = await makeSearchCall(request);
+            while (currBucketSize < minBucketSize || currBucketSize > maxBucketSize) {
+                request.params.q = `topic:{topic} language:{lang} stars:${min}..${loc}`;
+                const response = await makeSearchCall(request);
 
-    	console.log(`Ran request for star range ${minStars}..${maxStars}. Got ${step3firstresponse.data.total_count} results.`);
+                currBucketSize = response.data.total_count;
 
-    	repos = repos.concat(step3firstresponse.data.items);
-    	console.log(`Collected ${repos.length} repos.`);
+                console.log(`Ran request for star range ${min}..${loc}. Got ${currBucketSize} results.`);
 
-    	let nextCallLink = step3firstresponse.headers.link;
+                if (currBucketSize > maxBucketSize) {
+                    latestMax = loc;
+                    loc = Math.floor((latestMin+loc)/2);
+                } else if (currBucketSize < minBucketSize) {
+                    latestMin = loc;
+                    loc = Math.ceil((loc+latestMax)/2);
+                }
+            }
+            delimiters.splice(i+1,0,loc+1)
+        }
+        console.log(`Bucket delimiters: ${delimiters}`)
 
-    	while (nextCallLink && nextCallLink.match(linkRegex)) {
-    	    const nextPageLink = nextCallLink.match(linkRegex)[1];
-
-	    const nextPageRequest = {
-    		url: nextPageLink,
-    		method: 'get',
-    		headers: requestHeaders,
-    	    }
-
-	    const step3response = await makeSearchCall(nextPageRequest);
-
-    	    nextCallLink = step3response.headers.link;
-
-    	    repos = repos.concat(step3response.data.items);
-    	    console.log(`Collected ${repos.length} repos.`);
-    	}
+        return delimiters;
     }
 
-    console.log(`Finished collecting repos. Total of ${repos.length} repos, out of an expected ${totalResults} repos.`);
+    /* *************************************************************** *
+     *  Collect all repos
+     * *************************************************************** */
+    async function collectRepos(delimiters, searchBounds, topic = 'serverless', lang = 'js') {
+        let repos = [];
+        const request = {
+            url: 'search/repositories',
+            method: 'get',
+            baseURL: 'https://api.github.com',
+            headers: requestHeaders,
+            params: {
+                'sort': 'stars',
+                'order': 'desc',
+                'per_page': 100,
+            },
+        }
+        const {buckets, totalResults} = searchBounds;
 
-    console.log('Writing all collected repos to file...');
-    fs.writeFileSync(`all-repos-${getTimestampString()}.json`, JSON.stringify(repos));
-    console.log('Done.');
+        for (let i = 0; i < buckets; i++) {
+            const minStars = delimiters[i], maxStars = delimiters[i+1]-1;
+            request.params.q = `topic:{topic} language:{lang} stars:${minStars}..${maxStars}`;
 
-    // Step 4: Iterate over repo. Only keep repos that have a serverless.yml file. Download the serverless.yml file.
+            let response = await makeSearchCall(request);
 
-    const slsRepos = [];
-    const yamlFiles = {};
+            console.log(`Ran request for star range ${minStars}..${maxStars}. Got ${response.data.total_count} results.`);
 
-    for (const repo of repos) {
-    	request = {
-    	    url: 'search/code',
-    	    method: 'get',
-    	    baseURL: 'https://api.github.com',
-    	    headers: requestHeaders,
-    	    params: {
-    		'q': `filename:serverless.yml repo:${repo.full_name}`,
-    		'per_page': 100,
-    	    },
-    	}
+            repos = repos.concat(response.data.items);
+            console.log(`Collected ${repos.length} repos.`);
 
-	const step4firstresponse = await makeSearchCall(request);
+            let nextCallLink = response.headers.link;
 
-	if (step4firstresponse.data.total_count > 0) {
-	    slsRepos.push(repo);
+            while (nextCallLink && nextCallLink.match(linkRegex)) {
+                const nextPageLink = nextCallLink.match(linkRegex)[1];
 
-	    const repoYamlFiles = [];
+                const nextPageRequest = {
+                    url: nextPageLink,
+                    method: 'get',
+                    headers: requestHeaders,
+                }
 
-	    const fileUrlList = step4firstresponse.data.items.map(item => item.git_url);
+                response = await makeSearchCall(nextPageRequest);
 
-	    for (const fileUrl of fileUrlList) {
-    		const fileRequest = {
-    		    url: fileUrl,
-    		    method: 'get',
-    		    headers: requestHeaders,
-    		}
+                nextCallLink = response.headers.link;
 
-		const step4response = await makeAPICall(fileRequest);
+                repos = repos.concat(response.data.items);
+                console.log(`Collected ${repos.length} repos.`);
+            }
+        }
 
-    		const slsConf = yaml.safeLoad(Buffer.from(step4response.data.content, step4response.data.encoding).toString());
-		repoYamlFiles.push(slsConf);
-	    }
+        console.log(`Finished collecting repos. Total of ${repos.length} repos, out of an expected ${totalResults} repos.`);
 
-	    yamlFiles.id = repo.id;
-	    yamlFiles.files = repoYamlFiles;
-	}
+        console.log('Writing all collected repos to file...');
+        fs.writeFileSync(`all-repos-${getTimestampString()}.json`, JSON.stringify(repos));
+        console.log('Done.');
+
+        return repos;
     }
 
-    console.log(`${slsRepos.length} repos contain serverless.yml files, out of a total of ${repos.length}.`);
+    /* ***************************************************************
+     * Iterate over repo. Only keep repos that have a serverless.yml
+     *  file. Download all serverless.yml files.
+     * *************************************************************** */
+    async function collectSlsFiles(repos) {
+        const slsRepos = [];
+        const yamlFiles = {};
 
-    console.log('Writing sls repos to file...');
-    fs.writeFileSync(`sls-repos-${getTimestampString()}.json`, JSON.stringify(slsRepos));
-    console.log('Done.');
+        for (const repo of repos) {
+            const request = {
+                url: 'search/code',
+                method: 'get',
+                baseURL: 'https://api.github.com',
+                headers: requestHeaders,
+                params: {
+                    'q': `filename:serverless.yml repo:${repo.full_name}`,
+                    'per_page': 100,
+                },
+            }
 
-    console.log('Writing conf file mapping to file...');
-    fs.writeFileSync(`yaml-file-mapping-${getTimestampString()}.json`, JSON.stringify(yamlFiles));
-    console.log('Done.');
+            const codeSearchResponse = await makeSearchCall(request);
+
+            if (codeSearchResponse.data.total_count > 0) {
+                slsRepos.push(repo);
+
+                const repoYamlFiles = [];
+
+                const fileUrlList = codeSearchResponse.data.items.map(item => item.git_url);
+
+                for (const fileUrl of fileUrlList) {
+                    const fileRequest = {
+                        url: fileUrl,
+                        method: 'get',
+                        headers: requestHeaders,
+                    }
+
+                    const fileResponse = await makeAPICall(fileRequest);
+
+                    const slsConf = yaml.safeLoad(Buffer.from(fileResponse.data.content, fileResponse.data.encoding).toString());
+                    repoYamlFiles.push(slsConf);
+                }
+
+                yamlFiles.id = repo.id;
+                yamlFiles.files = repoYamlFiles;
+            }
+        }
+
+        console.log(`${slsRepos.length} repos contain serverless.yml files, out of a total of ${repos.length}.`);
+
+        console.log('Writing sls repos to file...');
+        fs.writeFileSync(`sls-repos-${getTimestampString()}.json`, JSON.stringify(slsRepos));
+        console.log('Done.');
+
+        console.log('Writing conf file mapping to file...');
+        fs.writeFileSync(`yaml-file-mapping-${getTimestampString()}.json`, JSON.stringify(yamlFiles));
+        console.log('Done.');
+
+        return { slsRepos, yamlFiles };
+
+    }
 }
 
 main();
