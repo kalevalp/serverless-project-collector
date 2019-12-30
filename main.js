@@ -1,8 +1,6 @@
 const axios = require('axios');
 const aws = require('aws-sdk');
 const fs = require('fs');
-const yaml = require('js-yaml');
-const cliProgress = require('cli-progress');
 
 const githubToken = process.env.GITHUB_API_TOKEN;
 const verbose = process.env.PROJECT_COLLECTOR_VERBOSE;
@@ -13,10 +11,10 @@ if (verbose) {
         return request;
     });
 
-    // axios.interceptors.response.use(response => {
-    //  console.log('Response:', response)
-    //  return response
-    // })
+    axios.interceptors.response.use(response => {
+        console.log(`Remaining API calls: ${response.headers['x-ratelimit-remaining']}. Resets in ${Number(response.headers['x-ratelimit-reset']-Date.now()/1000)}s.`);
+        return response
+    });
 }
 
 
@@ -46,19 +44,24 @@ const requestHeaders = {
 async function main() {
 
     function httpCallerBuilder(threshold) {
-        let rateLimitRemaining, rateLimitReset;
+        let rateLimitRemaining;
+        let rateLimitReset;
 
         return async function makeHttpCall(request) {
             try {
                 if (rateLimitRemaining < threshold) {
-                    const timeToSleep = ratelimitReset*1000-Date.now();
+                    const timeToSleep = rateLimitReset*1000-Date.now();
                     console.log(`Nearing the edge of allowed rate. Current remaining allowed calls: ${rateLimitRemaining}. Sleeping until rate resets, ${timeToSleep}ms.`);
                     await sleep(timeToSleep);
                 }
                 const response = await axios(request);
 
                 rateLimitRemaining = Number(response.headers['x-ratelimit-remaining']);
-                ratelimitReset = Number(response.headers['x-ratelimit-reset']) ;
+                rateLimitReset = Number(response.headers['x-ratelimit-reset']) ;
+
+                if (verbose) {
+                    console.log(`Got response from call with ${threshold} threshold. New rateLimitRemaining is ${rateLimitRemaining}. New rateLimitReset is ${rateLimitReset} (in ${rateLimitReset-Date.now()/1000}s).`)
+                }
 
                 return response;
             } catch (err) {
@@ -70,6 +73,8 @@ async function main() {
 
     const makeSearchCall = httpCallerBuilder(5);
     const makeAPICall = httpCallerBuilder(50);
+
+    const linkRegex = /<(.*)>; rel="next"/;
 
     /* ******************************************************** *
      * Initial call to the search API.
@@ -91,17 +96,17 @@ async function main() {
             },
         }
 
-        const linkRegex = /<(.*)>; rel="next"/;
-
         const response = await makeSearchCall(request);
 
         const res = {
              maxBucketSize: 1000,
              totalResults: response.data.total_count,
-             buckets: Math.ceil(totalResults/maxBucketSize),
-             minBucketSize: Math.ceil(totalResults/buckets),
              maxStars: response.data.items[0].stargazers_count,
         };
+
+        res.buckets = Math.ceil(res.totalResults/res.maxBucketSize);
+        res.minBucketSize = Math.ceil(res.totalResults/res.buckets);
+
 
         console.log(
             `
@@ -144,7 +149,7 @@ Initial call to search.
             let currBucketSize = 0;
 
             while (currBucketSize < minBucketSize || currBucketSize > maxBucketSize) {
-                request.params.q = `topic:{topic} language:{lang} stars:${min}..${loc}`;
+                request.params.q = `topic:${topic} language:${lang} stars:${min}..${loc}`;
                 const response = await makeSearchCall(request);
 
                 currBucketSize = response.data.total_count;
@@ -186,7 +191,7 @@ Initial call to search.
 
         for (let i = 0; i < buckets; i++) {
             const minStars = delimiters[i], maxStars = delimiters[i+1]-1;
-            request.params.q = `topic:{topic} language:{lang} stars:${minStars}..${maxStars}`;
+            request.params.q = `topic:${topic} language:${lang} stars:${minStars}..${maxStars}`;
 
             let response = await makeSearchCall(request);
 
@@ -230,7 +235,9 @@ Initial call to search.
      * *************************************************************** */
     async function collectSlsFiles(repos) {
         const slsRepos = [];
-        const yamlFiles = {};
+        const yamlFiles = [];
+
+        let counter = 0;
 
         for (const repo of repos) {
             const request = {
@@ -262,12 +269,15 @@ Initial call to search.
 
                     const fileResponse = await makeAPICall(fileRequest);
 
-                    const slsConf = yaml.safeLoad(Buffer.from(fileResponse.data.content, fileResponse.data.encoding).toString());
-                    repoYamlFiles.push(slsConf);
+                    repoYamlFiles.push(Buffer.from(fileResponse.data.content, fileResponse.data.encoding).toString());
                 }
 
-                yamlFiles.id = repo.id;
-                yamlFiles.files = repoYamlFiles;
+                yamlFiles.push({id: repo.id, files: repoYamlFiles});
+            }
+
+            counter++;
+            if (counter % 20 === 0) {
+                console.log(`Processed ${counter} repos. ${slsRepos.length}/${counter} contain sls yaml files.`);
             }
         }
 
@@ -284,6 +294,16 @@ Initial call to search.
         return { slsRepos, yamlFiles };
 
     }
+
+
+    // Full flow
+    // topic = 'serverless', lang = 'js'
+    // const searchBounds = await getSearchBounds();
+    // const delimiters = await findBucketDelimiters(searchBounds);
+    // const repos = await collectRepos(delimiters, searchBounds);
+
+    const repos = JSON.parse(fs.readFileSync('all-repos-2019-11-1-225758.json'));
+    const { slsRepos, yamlFiles } = await collectSlsFiles(repos);
 }
 
 main();
