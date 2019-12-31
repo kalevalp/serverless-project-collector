@@ -279,6 +279,10 @@ Initial call to search.
             if (counter % 20 === 0) {
                 console.log(`Processed ${counter} repos. ${slsRepos.length}/${counter} contain sls yaml files.`);
             }
+	    if (counter % 400 === 0) {
+		console.log(`Taking a break. Sleeping for two hours to avoid triggering github's abuse policy.`)
+		await sleep(7200000);
+	    }
         }
 
         console.log(`${slsRepos.length} repos contain serverless.yml files, out of a total of ${repos.length}.`);
