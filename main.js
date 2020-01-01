@@ -301,12 +301,12 @@ Initial call to search.
 
 
     // Full flow
-    // topic = 'serverless', lang = 'js'
-    // const searchBounds = await getSearchBounds();
-    // const delimiters = await findBucketDelimiters(searchBounds);
-    // const repos = await collectRepos(delimiters, searchBounds);
+    topic = 'serverless', lang = 'js'
+    const searchBounds = await getSearchBounds();
+    const delimiters = await findBucketDelimiters(searchBounds);
+    const repos = await collectRepos(delimiters, searchBounds);
 
-    const repos = JSON.parse(fs.readFileSync('all-repos-2019-11-1-225758.json'));
+    // const repos = JSON.parse(fs.readFileSync('all-repos-2019-11-1-225758.json'));
     const { slsRepos, yamlFiles } = await collectSlsFiles(repos);
 }
 
