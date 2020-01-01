@@ -1,0 +1,292 @@
+(node:1751) UnhandledPromiseRejectionWarning: Error: ENOENT: no such file or directory, open 'all-repos-2019-11-1-225758.json'
+    at Object.openSync (fs.js:440:3)
+    at Object.readFileSync (fs.js:342:35)
+    at main (/home/ubuntu/serverless-project-collector/main.js:309:33)
+    at Object.<anonymous> (/home/ubuntu/serverless-project-collector/main.js:313:1)
+    at Module._compile (internal/modules/cjs/loader.js:959:30)
+    at Object.Module._extensions..js (internal/modules/cjs/loader.js:995:10)
+    at Module.load (internal/modules/cjs/loader.js:815:32)
+    at Function.Module._load (internal/modules/cjs/loader.js:727:14)
+    at Function.Module.runMain (internal/modules/cjs/loader.js:1047:10)
+    at internal/main/run_main_module.js:17:11
+(node:1751) UnhandledPromiseRejectionWarning: Unhandled promise rejection. This error originated either by throwing inside of an async function without a catch block, or by rejecting a promise which was not handled with .catch(). (rejection id: 1)
+(node:1751) [DEP0018] DeprecationWarning: Unhandled promise rejections are deprecated. In the future, promise rejections that are not handled will terminate the Node.js process with a non-zero exit code.
+
+Initial call to search.
+  Got 2152 results.
+  Should split into 3 buckets, sized [718..1000].
+  The project with the most stars has 33648 stars.
+
+Ran request for star range 0..16824. Got 2151 results.
+Ran request for star range 0..8412. Got 2151 results.
+Ran request for star range 0..4206. Got 2148 results.
+Ran request for star range 0..2103. Got 2138 results.
+Ran request for star range 0..1051. Got 2128 results.
+Ran request for star range 0..525. Got 2111 results.
+Ran request for star range 0..262. Got 2085 results.
+Ran request for star range 0..131. Got 2042 results.
+Ran request for star range 0..65. Got 1968 results.
+Ran request for star range 0..32. Got 1875 results.
+Ran request for star range 0..16. Got 1734 results.
+Ran request for star range 0..8. Got 1601 results.
+Ran request for star range 0..4. Got 1415 results.
+Ran request for star range 0..2. Got 1261 results.
+Ran request for star range 0..1. Got 1097 results.
+Ran request for star range 0..0. Got 799 results.
+Ran request for star range 1..16825. Got 1352 results.
+Ran request for star range 1..8413. Got 1352 results.
+Ran request for star range 1..4207. Got 1349 results.
+Ran request for star range 1..2104. Got 1339 results.
+Ran request for star range 1..1052. Got 1329 results.
+Ran request for star range 1..526. Got 1312 results.
+Ran request for star range 1..263. Got 1287 results.
+Ran request for star range 1..132. Got 1243 results.
+Ran request for star range 1..66. Got 1171 results.
+Ran request for star range 1..33. Got 1078 results.
+Ran request for star range 1..17. Got 948 results.
+Bucket delimiters: 0,1,18,33649
+Ran request for star range 0..0. Got 799 results.
+Collected 100 repos.
+Collected 200 repos.
+Collected 300 repos.
+Collected 400 repos.
+Collected 500 repos.
+Collected 600 repos.
+Collected 700 repos.
+Collected 799 repos.
+Ran request for star range 1..17. Got 948 results.
+Collected 899 repos.
+Collected 999 repos.
+Collected 1099 repos.
+Collected 1199 repos.
+Collected 1299 repos.
+Collected 1399 repos.
+Collected 1499 repos.
+Collected 1599 repos.
+Collected 1699 repos.
+Collected 1747 repos.
+Ran request for star range 18..33648. Got 405 results.
+Collected 1847 repos.
+Collected 1947 repos.
+Collected 2047 repos.
+Collected 2147 repos.
+Collected 2152 repos.
+Finished collecting repos. Total of 2152 repos, out of an expected 2152 repos.
+Writing all collected repos to file...
+Done.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 12999ms.
+Processed 20 repos. 19/20 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 45595ms.
+Processed 40 repos. 34/40 contain sls yaml files.
+Processed 60 repos. 49/60 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 47269ms.
+Processed 80 repos. 65/80 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48945ms.
+Processed 100 repos. 82/100 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 46365ms.
+Processed 120 repos. 98/120 contain sls yaml files.
+Processed 140 repos. 108/140 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48598ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 3. Sleeping until rate resets, 59538ms.
+Processed 160 repos. 115/160 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50407ms.
+Processed 180 repos. 124/180 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 51055ms.
+Processed 200 repos. 133/200 contain sls yaml files.
+Processed 220 repos. 143/220 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 47551ms.
+Processed 240 repos. 151/240 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50347ms.
+Processed 260 repos. 157/260 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50168ms.
+Processed 280 repos. 164/280 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 51974ms.
+Processed 300 repos. 172/300 contain sls yaml files.
+Processed 320 repos. 180/320 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 51498ms.
+Processed 340 repos. 185/340 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48304ms.
+Processed 360 repos. 196/360 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48707ms.
+Processed 380 repos. 203/380 contain sls yaml files.
+Processed 400 repos. 211/400 contain sls yaml files.
+Taking a break. Sleeping for two hours to avoid triggering github's abuse policy.
+Processed 420 repos. 219/420 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50606ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 3. Sleeping until rate resets, 59732ms.
+Processed 440 repos. 229/440 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49353ms.
+Processed 460 repos. 241/460 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49911ms.
+Processed 480 repos. 252/480 contain sls yaml files.
+Processed 500 repos. 256/500 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 51022ms.
+Processed 520 repos. 265/520 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 44880ms.
+Processed 540 repos. 275/540 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 51678ms.
+Processed 560 repos. 283/560 contain sls yaml files.
+Processed 580 repos. 295/580 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49292ms.
+Processed 600 repos. 300/600 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49906ms.
+Processed 620 repos. 312/620 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49168ms.
+Processed 640 repos. 322/640 contain sls yaml files.
+Processed 660 repos. 326/660 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 51196ms.
+Processed 680 repos. 341/680 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48991ms.
+Processed 700 repos. 348/700 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 47988ms.
+Processed 720 repos. 361/720 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50118ms.
+Processed 740 repos. 373/740 contain sls yaml files.
+Processed 760 repos. 388/760 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 47486ms.
+Processed 780 repos. 397/780 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 51363ms.
+Processed 800 repos. 409/800 contain sls yaml files.
+Taking a break. Sleeping for two hours to avoid triggering github's abuse policy.
+Processed 820 repos. 415/820 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48317ms.
+Processed 840 repos. 421/840 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50488ms.
+Processed 860 repos. 427/860 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48035ms.
+Processed 880 repos. 439/880 contain sls yaml files.
+Processed 900 repos. 448/900 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 51072ms.
+Processed 920 repos. 459/920 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49865ms.
+Processed 940 repos. 467/940 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 46717ms.
+Processed 960 repos. 473/960 contain sls yaml files.
+Processed 980 repos. 483/980 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48945ms.
+Processed 1000 repos. 488/1000 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 51917ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 3. Sleeping until rate resets, 59338ms.
+Processed 1020 repos. 495/1020 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49396ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 3. Sleeping until rate resets, 59729ms.
+Processed 1040 repos. 504/1040 contain sls yaml files.
+Processed 1060 repos. 509/1060 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 51517ms.
+Processed 1080 repos. 520/1080 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49729ms.
+Processed 1100 repos. 527/1100 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50035ms.
+Processed 1120 repos. 532/1120 contain sls yaml files.
+Processed 1140 repos. 540/1140 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50776ms.
+Processed 1160 repos. 548/1160 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50849ms.
+Processed 1180 repos. 555/1180 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 47860ms.
+Processed 1200 repos. 568/1200 contain sls yaml files.
+Taking a break. Sleeping for two hours to avoid triggering github's abuse policy.
+Processed 1220 repos. 577/1220 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48172ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 3. Sleeping until rate resets, -250ms.
+Processed 1240 repos. 583/1240 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 52007ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 3. Sleeping until rate resets, -475ms.
+Processed 1260 repos. 592/1260 contain sls yaml files.
+Processed 1280 repos. 597/1280 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50603ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 3. Sleeping until rate resets, -788ms.
+Processed 1300 repos. 611/1300 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 47122ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 3. Sleeping until rate resets, -467ms.
+Processed 1320 repos. 625/1320 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50117ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 3. Sleeping until rate resets, -254ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 2. Sleeping until rate resets, -468ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 1. Sleeping until rate resets, -674ms.
+Processed 1340 repos. 628/1340 contain sls yaml files.
+Processed 1360 repos. 631/1360 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 51286ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 3. Sleeping until rate resets, -256ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 2. Sleeping until rate resets, -955ms.
+Processed 1380 repos. 639/1380 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 52511ms.
+Processed 1400 repos. 643/1400 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49229ms.
+Processed 1420 repos. 649/1420 contain sls yaml files.
+Processed 1440 repos. 655/1440 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 51187ms.
+Processed 1460 repos. 666/1460 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48348ms.
+Processed 1480 repos. 683/1480 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48640ms.
+Processed 1500 repos. 700/1500 contain sls yaml files.
+Processed 1520 repos. 710/1520 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 46592ms.
+Processed 1540 repos. 716/1540 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49961ms.
+Processed 1560 repos. 724/1560 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 51724ms.
+Processed 1580 repos. 732/1580 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49135ms.
+Processed 1600 repos. 742/1600 contain sls yaml files.
+Taking a break. Sleeping for two hours to avoid triggering github's abuse policy.
+Nearing the edge of allowed rate. Current remaining allowed calls: 3. Sleeping until rate resets, -7200614ms.
+Processed 1620 repos. 751/1620 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49334ms.
+Processed 1640 repos. 762/1640 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49744ms.
+Processed 1660 repos. 770/1660 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50669ms.
+Processed 1680 repos. 778/1680 contain sls yaml files.
+Processed 1700 repos. 785/1700 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50027ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 3. Sleeping until rate resets, 59685ms.
+Processed 1720 repos. 793/1720 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48947ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 3. Sleeping until rate resets, 59730ms.
+Processed 1740 repos. 804/1740 contain sls yaml files.
+Processed 1760 repos. 813/1760 contain sls yaml files.
+Processed 1780 repos. 817/1780 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 45525ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 3. Sleeping until rate resets, -304ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 2. Sleeping until rate resets, 59479ms.
+Processed 1800 repos. 823/1800 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48762ms.
+Processed 1820 repos. 831/1820 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49338ms.
+Processed 1840 repos. 841/1840 contain sls yaml files.
+Processed 1860 repos. 847/1860 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50998ms.
+Processed 1880 repos. 854/1880 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50465ms.
+Processed 1900 repos. 860/1900 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48756ms.
+Processed 1920 repos. 869/1920 contain sls yaml files.
+Processed 1940 repos. 879/1940 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48007ms.
+Processed 1960 repos. 886/1960 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48959ms.
+Processed 1980 repos. 892/1980 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49261ms.
+Processed 2000 repos. 899/2000 contain sls yaml files.
+Taking a break. Sleeping for two hours to avoid triggering github's abuse policy.
+Processed 2020 repos. 907/2020 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48242ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 3. Sleeping until rate resets, -282ms.
+Nearing the edge of allowed rate. Current remaining allowed calls: 2. Sleeping until rate resets, 59191ms.
+Processed 2040 repos. 914/2040 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 49548ms.
+Processed 2060 repos. 923/2060 contain sls yaml files.
+Processed 2080 repos. 929/2080 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 51280ms.
+Processed 2100 repos. 936/2100 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 50281ms.
+Processed 2120 repos. 945/2120 contain sls yaml files.
+Nearing the edge of allowed rate. Current remaining allowed calls: 4. Sleeping until rate resets, 48914ms.
+Processed 2140 repos. 955/2140 contain sls yaml files.
+961 repos contain serverless.yml files, out of a total of 2152.
+Writing sls repos to file...
+Done.
+Writing conf file mapping to file...
+Done.
