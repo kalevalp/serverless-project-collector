@@ -90,7 +90,7 @@ async function getSearchBounds(topic, lang) {
             'q': `topic:${topic} language:${lang}`,
             'sort': 'stars',
             'order': 'desc',
-            'per_page': 100,
+            'per_page': 5,
         },
     }
 
@@ -118,11 +118,10 @@ Initial call to search.
 
 /* *************************************************************** *
  *  Split into buckets
- *   There are several edge cases I'm not handling at the
- *   moment. Will handle if encountered.
- *     1. star range singleton sized too big for bucket
- *     2. star range of singleton too small for bucket, whereas star
- *        range of size 2 too big for bucket.
+ *
+ *    The dataset is bottom heavy, i.e., many 0-star repos. Makes
+ *    sense to do a bottom up partitioning of the search space.
+ *
  * *************************************************************** */
 async function findBucketDelimiters(searchBounds, topic, lang) {
     const request = {
@@ -131,40 +130,75 @@ async function findBucketDelimiters(searchBounds, topic, lang) {
         baseURL: 'https://api.github.com',
         headers: requestHeaders,
         params: {
-            'sort': 'stars',
-            'order': 'desc',
-            'per_page': 100,
+            // Don't waste time sorting
+            // 'sort': 'stars',
+            // 'order': 'desc',
+            'per_page': 5, // I don't actually care about the results
+                           // at this point, just the total number of
+                           // results.
         },
     }
 
-    const {maxStars, buckets, minBucketSize, maxBucketSize} = searchBounds;
+    const {maxStars, minBucketSize, maxBucketSize} = searchBounds;
+    let totalResults = searchBounds.totalResults;
 
-    const delimiters = [0, maxStars+1]; // Delimiters form ranges of [from..to) (including from, excluding to).
-    for (let i = 0; i < buckets-1; i++) {
-        const min = delimiters[i], max = delimiters[i+1]-1;
-        let latestMin = min, latestMax = max;
-        let loc = Math.ceil((max+min)/2);
-        let currBucketSize = 0;
+    const delimiters = [0]; // Delimiters form ranges of [from..to) (including from, excluding to).
+    const overfullBucketUpperBounds = [];
+    let from = 0;
+    while (totalResults > maxBucketSize) {
+        let to = from;
 
-        while (currBucketSize < minBucketSize || currBucketSize > maxBucketSize) {
-            request.params.q = `topic:${topic} language:${lang} stars:${min}..${loc}`;
+        let currBucketSize;
+
+        let lowerBound = from;
+        let upperBound = maxStars;
+
+        do {
+            request.params.q = `topic:${topic} language:${lang} stars:${from}..${to}`;
             const response = await makeSearchCall(request);
-
             currBucketSize = response.data.total_count;
 
-            console.log(`Ran request for star range ${min}..${loc}. Got ${currBucketSize} results.`);
+            console.log(`Ran request for star range ${from}..${to}. Got ${currBucketSize} results.`);
 
-            if (currBucketSize > maxBucketSize) {
-                latestMax = loc;
-                loc = Math.floor((latestMin+loc)/2);
-            } else if (currBucketSize < minBucketSize) {
-                latestMin = loc;
-                loc = Math.ceil((loc+latestMax)/2);
+            if (currBucketSize < minBucketSize) { // Keep increasing the size of the bucket
+                lowerBound = to;
+
+                if (upperBound < maxStars) { // Overshot at some point. Searching within bounds.
+                    to = Math.ceil((to+upperBound)/2);
+                } else {
+                    to = Math.min(to === 0 ? 1 : to * 2, upperBound);
+                }
+
+                if (lowerBound === to) { // Reached fixed-point. Fix by adding another bucket.
+                    searchBounds.buckets += 1;
+                    console.log(`Detected an underfull bucket. Star range: ${from}..${to}. Size: ${currBucketSize}. New bucket count: ${searchBounds.buckets}.`);
+                    break;
+                }
+            } else if (currBucketSize > maxBucketSize) { // Overshot. Reduce.
+                upperBound = to;
+
+                to = Math.floor((lowerBound+to)/2);
+
+                if (upperBound === to) { // Reached fixed-point. Fix by recording this bucket as
+                                         // overfull. When getting repos it will require special
+                                         // handling.
+
+                    overfullBucketUpperBounds.push(to);
+                    console.log(`Detected an overfull bucket. Star range: ${from}..${to}. Size: ${currBucketSize}.`)
+                    break;
+                }
             }
-        }
-        delimiters.splice(i+1,0,loc+1)
+
+        } while (currBucketSize < minBucketSize ||
+                 currBucketSize > maxBucketSize);
+
+        delimiters.push(to+1);
+        totalResults -= currBucketSize;
+        from = to+1;
     }
-    console.log(`Bucket delimiters: ${delimiters}`)
+    delimiters.push(maxStars+1);
+
+    console.log(`Bucket delimiters: ${delimiters}\n`)
 
     return delimiters;
 }
@@ -290,32 +324,34 @@ async function collectFullData() {
     // Full flow
     let repos = [];
     for (const topic of topics) {
+        console.log(`Collecting repos for topic:${topic}`);
+
         const searchBounds = await getSearchBounds(topic, language);
         const delimiters = await findBucketDelimiters(searchBounds, topic, language);
-        repos = repos.concat(await collectRepos(delimiters, searchBounds, topic, language));
+        // repos = repos.concat(await collectRepos(delimiters, searchBounds, topic, language));
 
         // Uncomment this in case we encounter github's abuse policy again
         // console.log(`Taking a break. Sleeping for half an hour to avoid triggering github's abuse policy.`)
 	// await sleep(108000);
     };
 
-    console.log(`Collected a total of ${repos.length} repos.`);
-    repos = _.uniqBy(repos, elem => elem.id);
-    console.log(`After filtering out duplicates, have a total of ${repos.length} repos.`);
+    // console.log(`Collected a total of ${repos.length} repos.`);
+    // repos = _.uniqBy(repos, elem => elem.id);
+    // console.log(`After filtering out duplicates, have a total of ${repos.length} repos.`);
 
-    console.log('Writing all collected repos to file...');
-    fs.writeFileSync(`all-repos-${getTimestampString()}.json`, JSON.stringify(repos));
-    console.log('Done.');
+    // console.log('Writing all collected repos to file...');
+    // fs.writeFileSync(`all-repos-${getTimestampString()}.json`, JSON.stringify(repos));
+    // console.log('Done.');
 
-    const { slsRepos, yamlFiles } = await collectSlsFiles(repos);
+    // const { slsRepos, yamlFiles } = await collectSlsFiles(repos);
 
-    console.log('Writing sls repos to file...');
-    fs.writeFileSync(`sls-repos-${getTimestampString()}.json`, JSON.stringify(slsRepos));
-    console.log('Done.');
+    // console.log('Writing sls repos to file...');
+    // fs.writeFileSync(`sls-repos-${getTimestampString()}.json`, JSON.stringify(slsRepos));
+    // console.log('Done.');
 
-    console.log('Writing conf file mapping to file...');
-    fs.writeFileSync(`yaml-file-mapping-${getTimestampString()}.json`, JSON.stringify(yamlFiles));
-    console.log('Done.');
+    // console.log('Writing conf file mapping to file...');
+    // fs.writeFileSync(`yaml-file-mapping-${getTimestampString()}.json`, JSON.stringify(yamlFiles));
+    // console.log('Done.');
 }
 
 async function collectIncrementalData() {
@@ -323,4 +359,4 @@ async function collectIncrementalData() {
 
 }
 
-
+collectFullData();
