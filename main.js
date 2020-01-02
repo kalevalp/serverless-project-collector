@@ -74,12 +74,10 @@ const makeAPICall = httpCallerBuilder(50);
 
 const linkRegex = /<(.*)>; rel="next"/;
 
-/* ******************************************************** *
- * Initial call to the search API.
- *   Determine the total number of elements in the search,
- *   and derive the number of buckets, and the size bounds
- *   of each bucket.
- * ******************************************************** */
+// Initial call to the search API.
+//   Determine the total number of elements in the search, and derive the number
+//   of buckets, and the size bounds of each bucket.
+
 async function getSearchBounds(topic, lang) {
     const request = {
         url: 'search/repositories',
@@ -116,13 +114,10 @@ Initial call to search.
     return res;
 }
 
-/* *************************************************************** *
- *  Split into buckets
- *
- *    The dataset is bottom heavy, i.e., many 0-star repos. Makes
- *    sense to do a bottom up partitioning of the search space.
- *
- * *************************************************************** */
+// Split into buckets
+//   The dataset is bottom heavy, i.e., many 0-star repos. Makes sense to do a
+//   bottom up partitioning of the search space.
+
 async function findBucketDelimiters(searchBounds, topic, lang) {
     const request = {
         url: 'search/repositories',
@@ -143,7 +138,6 @@ async function findBucketDelimiters(searchBounds, topic, lang) {
     let totalResults = searchBounds.totalResults;
 
     const delimiters = [0]; // Delimiters form ranges of [from..to) (including from, excluding to).
-    const overfullBucketUpperBounds = [];
     let from = 0;
     while (totalResults > maxBucketSize) {
         let to = from;
@@ -169,7 +163,7 @@ async function findBucketDelimiters(searchBounds, topic, lang) {
                     to = Math.min(to === 0 ? 1 : to * 2, upperBound);
                 }
 
-                if (lowerBound === to) { // Reached fixed-point. Fix by adding another bucket.
+                if (lowerBound === to) { // Reached fixed-point. Fix by creating an additional, undersized bucket.
                     searchBounds.buckets += 1;
                     console.log(`Detected an underfull bucket. Star range: ${from}..${to}. Size: ${currBucketSize}. New bucket count: ${searchBounds.buckets}.`);
                     break;
@@ -179,11 +173,9 @@ async function findBucketDelimiters(searchBounds, topic, lang) {
 
                 to = Math.floor((lowerBound+to)/2);
 
-                if (upperBound === to) { // Reached fixed-point. Fix by recording this bucket as
-                                         // overfull. When getting repos it will require special
-                                         // handling.
-
-                    overfullBucketUpperBounds.push(to);
+                if (upperBound === to) { // Reached fixed-point. Can't create a bucket that is
+					 // smaller than the search size limit. Instead, handle when
+					 // fetching repos.
                     console.log(`Detected an overfull bucket. Star range: ${from}..${to}. Size: ${currBucketSize}.`)
                     break;
                 }
@@ -196,16 +188,21 @@ async function findBucketDelimiters(searchBounds, topic, lang) {
         totalResults -= currBucketSize;
         from = to+1;
     }
+
     delimiters.push(maxStars+1);
 
-    console.log(`Bucket delimiters: ${delimiters}\n`)
+    console.log(`Bucket delimiters: ${delimiters}\n`);
 
     return delimiters;
 }
 
-/* *************************************************************** *
- *  Collect all repos
- * *************************************************************** */
+// Collect all repos
+//
+//   When encountering an overfull bucket, use 'updated_at' to
+//   get the next set of repos.
+//   This makes the reasonable (?) assumption that the data does not include two
+//   repos that were updated at the exact same millisecond. If they exist, some
+//   of them might not be recorded in the dataset.
 async function collectRepos(delimiters, searchBounds, topic, lang) {
     let repos = [];
     const request = {
@@ -214,7 +211,7 @@ async function collectRepos(delimiters, searchBounds, topic, lang) {
         baseURL: 'https://api.github.com',
         headers: requestHeaders,
         params: {
-            'sort': 'stars',
+            'sort': 'updated',
             'order': 'desc',
             'per_page': 100,
         },
@@ -223,33 +220,46 @@ async function collectRepos(delimiters, searchBounds, topic, lang) {
 
     for (let i = 0; i < buckets; i++) {
         const minStars = delimiters[i], maxStars = delimiters[i+1]-1;
-        request.params.q = `topic:${topic} language:${lang} stars:${minStars}..${maxStars}`;
 
-        let response = await makeSearchCall(request);
+	do {
+	    let timestamp;
 
-        console.log(`Ran request for star range ${minStars}..${maxStars}. Got ${response.data.total_count} results.`);
+            request.params.q = `topic:${topic} language:${lang} stars:${minStars}..${maxStars} ${timestamp ? "updated:<" : ''}${timestamp ? timestamp : ''}`;
 
-        repos = repos.concat(response.data.items);
-        console.log(`Collected ${repos.length} repos.`);
+            let response = await makeSearchCall(request);
 
-        let nextCallLink = response.headers.link;
-
-        while (nextCallLink && nextCallLink.match(linkRegex)) {
-            const nextPageLink = nextCallLink.match(linkRegex)[1];
-
-            const nextPageRequest = {
-                url: nextPageLink,
-                method: 'get',
-                headers: requestHeaders,
-            }
-
-            response = await makeSearchCall(nextPageRequest);
-
-            nextCallLink = response.headers.link;
+            console.log(`Ran request for star range ${minStars}..${maxStars}${timestamp?' and timestamp <':''}${timestamp?timestamp:''}. Got ${response.data.total_count} results.`);
 
             repos = repos.concat(response.data.items);
             console.log(`Collected ${repos.length} repos.`);
-        }
+
+            let nextCallLink = response.headers.link;
+
+            while (nextCallLink && nextCallLink.match(linkRegex)) {
+		const nextPageLink = nextCallLink.match(linkRegex)[1];
+
+		const nextPageRequest = {
+                    url: nextPageLink,
+                    method: 'get',
+                    headers: requestHeaders,
+		}
+
+		response = await makeSearchCall(nextPageRequest);
+
+		nextCallLink = response.headers.link;
+
+		repos = repos.concat(response.data.items);
+		console.log(`Collected ${repos.length} repos.`);
+            }
+
+	    if (response.data.total_count > 1000) {
+		console.log(`Oversized bucket encountered. Proceeding to get the rest of the repos in the bucket`);
+		const earliestRepo = response.data.items[response.data.items.length-1];
+		timestamp = earliestRepo.pushed_at;
+	    } else {
+		timestamp = undefined;
+	    }
+	} while {!timestamp}; // Use the existence of a timestamp as a flag for whether another iteration is required for this bucket.
     }
 
     console.log(`Finished collecting repos. Total of ${repos.length} repos, out of an expected ${totalResults} repos.`);
@@ -257,10 +267,8 @@ async function collectRepos(delimiters, searchBounds, topic, lang) {
     return repos;
 }
 
-/* ***************************************************************
- * Iterate over repo. Only keep repos that have a serverless.yml
- *  file. Download all serverless.yml files.
- * *************************************************************** */
+// Iterate over repo. Only keep repos that have a serverless.yml file. Download
+// all serverless.yml files.
 async function collectSlsFiles(repos) {
     const slsRepos = [];
     const yamlFiles = [];
