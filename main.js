@@ -221,9 +221,9 @@ async function collectRepos(delimiters, searchBounds, topic, lang) {
     for (let i = 0; i < buckets; i++) {
         const minStars = delimiters[i], maxStars = delimiters[i+1]-1;
 
-	do {
-	    let timestamp;
+	let timestamp;
 
+	do {
             request.params.q = `topic:${topic} language:${lang} stars:${minStars}..${maxStars} ${timestamp ? "updated:<" : ''}${timestamp ? timestamp : ''}`;
 
             let response = await makeSearchCall(request);
@@ -259,7 +259,7 @@ async function collectRepos(delimiters, searchBounds, topic, lang) {
 	    } else {
 		timestamp = undefined;
 	    }
-	} while {!timestamp}; // Use the existence of a timestamp as a flag for whether another iteration is required for this bucket.
+	} while (timestamp); // Use the existence of a timestamp as a flag for whether another iteration is required for this bucket.
     }
 
     console.log(`Finished collecting repos. Total of ${repos.length} repos, out of an expected ${totalResults} repos.`);
@@ -315,9 +315,9 @@ async function collectSlsFiles(repos) {
         if (counter % 20 === 0) {
             console.log(`Processed ${counter} repos. ${slsRepos.length}/${counter} contain sls yaml files.`);
         }
-	if (counter % 400 === 0) {
-	    console.log(`Taking a break. Sleeping for two hours to avoid triggering github's abuse policy.`)
-	    await sleep(7200000);
+	if (counter % 50 === 0) {
+	    console.log(`Taking a break. Sleeping for half an hour to avoid triggering github's abuse policy.`)
+	    await sleep(108000);
 	}
     }
 
@@ -336,30 +336,30 @@ async function collectFullData() {
 
         const searchBounds = await getSearchBounds(topic, language);
         const delimiters = await findBucketDelimiters(searchBounds, topic, language);
-        // repos = repos.concat(await collectRepos(delimiters, searchBounds, topic, language));
+        repos = repos.concat(await collectRepos(delimiters, searchBounds, topic, language));
 
         // Uncomment this in case we encounter github's abuse policy again
-        // console.log(`Taking a break. Sleeping for half an hour to avoid triggering github's abuse policy.`)
-	// await sleep(108000);
+        console.log(`Taking a break. Sleeping for half an hour to avoid triggering github's abuse policy.`)
+	await sleep(108000);
     };
 
-    // console.log(`Collected a total of ${repos.length} repos.`);
-    // repos = _.uniqBy(repos, elem => elem.id);
-    // console.log(`After filtering out duplicates, have a total of ${repos.length} repos.`);
+    console.log(`Collected a total of ${repos.length} repos.`);
+    repos = _.uniqBy(repos, elem => elem.id);
+    console.log(`After filtering out duplicates, have a total of ${repos.length} repos.`);
 
-    // console.log('Writing all collected repos to file...');
-    // fs.writeFileSync(`all-repos-${getTimestampString()}.json`, JSON.stringify(repos));
-    // console.log('Done.');
+    console.log('Writing all collected repos to file...');
+    fs.writeFileSync(`all-repos-${getTimestampString()}.json`, JSON.stringify(repos));
+    console.log('Done.');
 
-    // const { slsRepos, yamlFiles } = await collectSlsFiles(repos);
+    const { slsRepos, yamlFiles } = await collectSlsFiles(repos);
 
-    // console.log('Writing sls repos to file...');
-    // fs.writeFileSync(`sls-repos-${getTimestampString()}.json`, JSON.stringify(slsRepos));
-    // console.log('Done.');
+    console.log('Writing sls repos to file...');
+    fs.writeFileSync(`sls-repos-${getTimestampString()}.json`, JSON.stringify(slsRepos));
+    console.log('Done.');
 
-    // console.log('Writing conf file mapping to file...');
-    // fs.writeFileSync(`yaml-file-mapping-${getTimestampString()}.json`, JSON.stringify(yamlFiles));
-    // console.log('Done.');
+    console.log('Writing conf file mapping to file...');
+    fs.writeFileSync(`yaml-file-mapping-${getTimestampString()}.json`, JSON.stringify(yamlFiles));
+    console.log('Done.');
 }
 
 async function collectIncrementalData() {
