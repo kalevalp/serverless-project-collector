@@ -1,7 +1,7 @@
 const axios = require('axios');
 const aws = require('aws-sdk');
 const fs = require('fs');
-var _ = require('lodash');
+const _ = require('lodash');
 
 const githubToken = process.env.GITHUB_API_TOKEN;
 const verbose = process.env.PROJECT_COLLECTOR_VERBOSE;
@@ -32,8 +32,17 @@ function getTimestampString() {
     return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}-${d.getHours()}${d.getMinutes()}${d.getSeconds()}`;
 }
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+
+async function sleep(ms) {
+    if (ms > 60000) {
+	for (let i = 0; i < ms; i+=1000) {
+	    await new Promise(resolve => setTimeout(resolve, 1000));
+	    process.stdout.write('.');
+	}
+	console.log();
+    } else {
+	return new Promise(resolve => setTimeout(resolve, ms));
+    }
 }
 
 const requestHeaders = {
@@ -316,8 +325,8 @@ async function collectSlsFiles(repos) {
             console.log(`Processed ${counter} repos. ${slsRepos.length}/${counter} contain sls yaml files.`);
         }
 	if (counter % 50 === 0) {
-	    console.log(`Taking a break. Sleeping for half an hour to avoid triggering github's abuse policy.`)
-	    await sleep(108000);
+	    console.log(`Taking a break. Sleepng for half an hour to avoid triggering github's abuse policy.`)
+	    await sleep(1800000);
 	}
     }
 
@@ -340,7 +349,7 @@ async function collectFullData() {
 
         // Uncomment this in case we encounter github's abuse policy again
         console.log(`Taking a break. Sleeping for half an hour to avoid triggering github's abuse policy.`)
-	await sleep(108000);
+	await sleep(1800000);
     };
 
     console.log(`Collected a total of ${repos.length} repos.`);
