@@ -3,6 +3,10 @@ const aws = require('aws-sdk');
 const fs = require('fs');
 const _ = require('lodash');
 
+const yaml = require('yaml');
+
+
+
 const githubToken = process.env.GITHUB_API_TOKEN;
 const verbose = process.env.PROJECT_COLLECTOR_VERBOSE;
 
@@ -389,4 +393,40 @@ async function collectIncrementalData() {
 
 }
 
-collectFullData();
+// collectFullData();
+
+async function analyzeResults(reposFile, yamlMappingFile) {
+    const repos = JSON.parse(fs.readFileSync('./collected-data/sls-repos-2020-1-1-51444.json'));
+    const yamlMapping = JSON.parse(fs.readFileSync('./collected-data/yaml-file-mapping-2020-1-1-51444.json'));
+
+    const res = repos.map(repo => ({repo, files: (yamlMapping.find(elem => elem.id === repo.id)).files }))
+          .filter(({ repo, files }) =>  files.some(file => {try {yaml.parse(file); return true;} catch (err) {return false;}} ) )
+          .map(({ repo, files }) => ({repo, files: files.filter(file => {try {yaml.parse(file); return true;} catch (err) {return false;}})}))
+          .map(({ repo, files }) => ({repo, files: files.map(file => yaml.parse(file))}))
+          .map(({ repo, files }) => ({id: repo.id,
+                                      full_name: repo.full_name,
+                                      html_url: repo.html_url,
+                                      description: repo.description,
+                                      ssh_url: repo.ssh_url,
+                                      clone_url: repo.clone_url,
+                                      stargazers_count: repo.stargazers_count,
+                                      watchers_count: repo.watchers_count,
+                                      forks_count: repo.forks_count,
+                                      fork: repo.fork,
+                                      function_count: files.map(file => file && file.functions ? Object.keys(file.functions).length : 0).reduce((a,b) => a + b, 0),
+                                      resources: _.uniq(files.filter(file => file && file.resources && file.resources.Resources)
+                                                        .map(file => Object.values(file.resources.Resources).map(elem => elem.Type))
+                                                        .flat()),
+                                      files
+                                     }));
+
+    console.log('Writing data to file...');
+    fs.writeFileSync(`data-${getTimestampString()}.json`, JSON.stringify(repos));
+    console.log('Done.');
+
+}
+
+const reposFile = './collected-data/sls-repos-2020-1-1-51444.json';
+const yamlMappingFile = './collected-data/sls-repos-2020-1-1-51444.json';
+
+analyzeResults(reposFile, yamlMappingFile);
