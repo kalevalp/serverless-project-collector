@@ -55,26 +55,39 @@ function httpCallerBuilder(threshold) {
     let rateLimitReset;
 
     return async function makeHttpCall(request) {
-        try {
-            if (rateLimitRemaining < threshold) {
-                const timeToSleep = rateLimitReset*1000-Date.now();
-                console.log(`Nearing the edge of allowed rate. Current remaining allowed calls: ${rateLimitRemaining}. Sleeping until rate resets, ${timeToSleep}ms.`);
-                await sleep(timeToSleep);
+	let retries = 5;
+	while (retries > 0) {
+            try {
+		if (rateLimitRemaining < threshold) {
+                    const timeToSleep = rateLimitReset*1000-Date.now();
+                    console.log(`Nearing the edge of allowed rate. Current remaining allowed calls: ${rateLimitRemaining}. Sleeping until rate resets, ${timeToSleep}ms.`);
+                    await sleep(timeToSleep);
+		}
+		const response = await axios(request);
+
+		rateLimitRemaining = Number(response.headers['x-ratelimit-remaining']);
+		rateLimitReset = Number(response.headers['x-ratelimit-reset']) ;
+
+		if (verbose) {
+                    console.log(`Got response from call with ${threshold} threshold. New rateLimitRemaining is ${rateLimitRemaining}. New rateLimitReset is ${rateLimitReset} (in ${rateLimitReset-Date.now()/1000}s).`)
+		}
+
+		retries = 0;
+
+		return response;
+            } catch (err) {
+		console.log('Request failed!');
+		console.log(err);
+
+		console.log('Sleeping for 5min before retrying request.');
+		await sleep(300000);
+
+		retries--;
+		console.log(`Retrying. Retries remaining: ${retries}`);
             }
-            const response = await axios(request);
-
-            rateLimitRemaining = Number(response.headers['x-ratelimit-remaining']);
-            rateLimitReset = Number(response.headers['x-ratelimit-reset']) ;
-
-            if (verbose) {
-                console.log(`Got response from call with ${threshold} threshold. New rateLimitRemaining is ${rateLimitRemaining}. New rateLimitReset is ${rateLimitReset} (in ${rateLimitReset-Date.now()/1000}s).`)
-            }
-
-            return response;
-        } catch (err) {
-            console.error(err);
-            process.exit(1);
-        }
+	} 
+	console.log('Failed 5 retries. Exiting!');
+	process.exit(1);
     }
 }
 
@@ -324,7 +337,7 @@ async function collectSlsFiles(repos) {
         if (counter % 20 === 0) {
             console.log(`Processed ${counter} repos. ${slsRepos.length}/${counter} contain sls yaml files.`);
         }
-	if (counter % 50 === 0) {
+	if (counter % 200 === 0) {
 	    console.log(`Taking a break. Sleepng for half an hour to avoid triggering github's abuse policy.`)
 	    await sleep(1800000);
 	}
