@@ -2,9 +2,7 @@ const axios = require('axios');
 const aws = require('aws-sdk');
 const fs = require('fs');
 const _ = require('lodash');
-
 const yaml = require('yaml');
-
 
 
 const githubToken = process.env.GITHUB_API_TOKEN;
@@ -31,11 +29,13 @@ const topics = [
 const language = 'js';
 
 function getTimestampString() {
-    const d = new Date();
+    const fullDate = (new Date()).toISOString();
 
-    return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}-${d.getHours()}${d.getMinutes()}${d.getSeconds()}`;
+    // '2020-01-08T15:34:47.756Z'
+    const dateRE = /(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}).\d{3}Z/;
+
+    return fullDate.match(dateRE)[1];
 }
-
 
 async function sleep(ms) {
     if (ms > 60000) {
@@ -353,8 +353,15 @@ async function collectSlsFiles(repos) {
 
 }
 
+module.exports.getSearchBounds = getSearchBounds;
+module.exports.findBucketDelimiters = findBucketDelimiters;
+module.exports.collectRepos = collectRepos;
+module.exports.collectSlsFiles = collectSlsFiles;
+module.exports.analyzeResults = analyzeResults;
 
-async function collectFullData() {
+async function fullRun() {
+    const dir = `run-${getTimestampString()}`;
+
     // Full flow
     let repos = [];
     for (const topic of topics) {
@@ -374,30 +381,24 @@ async function collectFullData() {
     console.log(`After filtering out duplicates, have a total of ${repos.length} repos.`);
 
     console.log('Writing all collected repos to file...');
-    fs.writeFileSync(`all-repos-${getTimestampString()}.json`, JSON.stringify(repos));
+    fs.writeFileSync(`./${dir}/all-repos.json`, JSON.stringify(repos));
     console.log('Done.');
 
     const { slsRepos, yamlFiles } = await collectSlsFiles(repos);
 
     console.log('Writing sls repos to file...');
-    fs.writeFileSync(`sls-repos-${getTimestampString()}.json`, JSON.stringify(slsRepos));
+    fs.writeFileSync(`./${dir}/sls-repos.json`, JSON.stringify(slsRepos));
     console.log('Done.');
 
     console.log('Writing conf file mapping to file...');
-    fs.writeFileSync(`yaml-file-mapping-${getTimestampString()}.json`, JSON.stringify(yamlFiles));
+    fs.writeFileSync(`./${dir}/yaml-file-mapping.json`, JSON.stringify(yamlFiles));
     console.log('Done.');
-}
-
-async function collectIncrementalData() {
-
 
 }
 
-// collectFullData();
-
-async function analyzeResults(reposFile, yamlMappingFile) {
-    const repos = JSON.parse(fs.readFileSync('./collected-data/sls-repos-2020-1-1-51444.json'));
-    const yamlMapping = JSON.parse(fs.readFileSync('./collected-data/yaml-file-mapping-2020-1-1-51444.json'));
+async function analyze(dir) {
+    const repos = JSON.parse(fs.readFileSync(`./${dir}/sls-repos.json`));
+    const yamlMapping = JSON.parse(fs.readFileSync(`./${dir}/yaml-file-mapping.json`));
 
     const res = repos.map(repo => ({repo, files: (yamlMapping.find(elem => elem.id === repo.id)).files }))
           .filter(({ repo, files }) =>  files.some(file => {try {yaml.parse(file); return true;} catch (err) {return false;}} ) )
@@ -421,12 +422,56 @@ async function analyzeResults(reposFile, yamlMappingFile) {
                                      }));
 
     console.log('Writing data to file...');
-    fs.writeFileSync(`data-${getTimestampString()}.json`, JSON.stringify(repos));
+    fs.writeFileSync(`./${dir}/data.json`, JSON.stringify(repos));
     console.log('Done.');
 
 }
 
-const reposFile = './collected-data/sls-repos-2020-1-1-51444.json';
-const yamlMappingFile = './collected-data/sls-repos-2020-1-1-51444.json';
+async function increment(dir) {}
 
-analyzeResults(reposFile, yamlMappingFile);
+async function recover(dir) {}
+
+if (require.main === module) {
+
+    require('yargs')
+	.usage('Usage: $0 <command> [options]')
+	.command(['full', 'f'],
+		 'A full execution of the project collector',
+		 () => {},
+		 (argv) => fullRun()
+		)
+    	.command(['analyze <dir>', 'a'],
+		 'Run an analysis of the collected results',
+		 (yargs) => {
+		     yargs.positional('dir', {
+			 describe: 'A directory containing the raw github data to be analyzed',
+			 type: 'string'
+		     })},
+		 (argv) => analyze(argv.dir)
+		)
+        .command(['increment <dir>', 'i'],
+		 'Collect and process newly update porjects',
+		 (yargs) => {
+		     yargs.positional('dir', {
+			 describe: 'A directory containing the results that are to be incremented upon',
+			 type: 'string'
+		     })
+		 },
+		 (argv) => increment(argv.dir)
+		)
+	.command(['recover <dir>', 'r'],
+		 'Recover from a previously unfinished run',
+		 (yargs) => {
+		     yargs.positional('dir', {
+			 describe: 'A directory containing the results of a partial run',
+			 type: 'string'
+		     })
+		 },
+		 (argv) => recover(argv.dir)
+		)
+	.alias('h','help')
+	.argv;
+
+}
+
+
