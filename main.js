@@ -351,7 +351,7 @@ module.exports.getSearchBounds = getSearchBounds;
 module.exports.findBucketDelimiters = findBucketDelimiters;
 module.exports.collectRepos = collectRepos;
 module.exports.collectSlsFiles = collectSlsFiles;
-module.exports.analyzeResults = analyzeResults;
+module.exports.analyze = analyze;
 
 async function fullRun() {
     const dir = `run-${getTimestampString()}`;
