@@ -293,7 +293,7 @@ async function collectRepos(delimiters, searchBounds, topic, lang) {
     return repos;
 }
 
-// Iterate over repo. Only keep repos that have a serverless.yml file. Download
+// Iterate over repos. Only keep repos that have a serverless.yml file. Download
 // all serverless.yml files.
 async function collectSlsFiles(repos) {
     const slsRepos = [];
