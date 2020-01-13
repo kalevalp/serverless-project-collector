@@ -338,13 +338,7 @@ async function collectSlsFiles(repos) {
         }
 
         counter++;
-        if (counter % 20 === 0) {
-            console.log(`Processed ${counter} repos. ${slsRepos.length}/${counter} contain sls yaml files.`);
-        }
-	if (counter % 200 === 0) {
-	    console.log(`Taking a break. Sleepng for half an hour to avoid triggering github's abuse policy.`)
-	    await sleep(1800000);
-	}
+        process.stdout.write('.');
     }
 
     console.log(`${slsRepos.length} repos contain serverless.yml files, out of a total of ${repos.length}.`);
@@ -384,16 +378,27 @@ async function fullRun() {
     fs.writeFileSync(`./${dir}/all-repos.json`, JSON.stringify(repos));
     console.log('Done.');
 
-    const { slsRepos, yamlFiles } = await collectSlsFiles(repos);
+    const repoChunks = Array(Math.ceil(repos.length / 250))
+          .fill()
+          .map((_, index) => index * 250)
+          .map(begin => repos.slice(begin, begin + 250));
 
-    console.log('Writing sls repos to file...');
-    fs.writeFileSync(`./${dir}/sls-repos.json`, JSON.stringify(slsRepos));
-    console.log('Done.');
+    for (let i = 0; i < repoChunks.length; i++) {
+        const chunk = repoChunks[i];
 
-    console.log('Writing conf file mapping to file...');
-    fs.writeFileSync(`./${dir}/yaml-file-mapping.json`, JSON.stringify(yamlFiles));
-    console.log('Done.');
+        const { slsRepos, yamlFiles } = await collectSlsFiles(chunk);
 
+        console.log(`Writing chunk ${i} (of ${repoChunks.length}) sls repos to file...`);
+        fs.writeFileSync(`./${dir}/sls-repos-${i}of${repoChunks.length}.json`, JSON.stringify(slsRepos));
+        console.log('Done.');
+
+        console.log(`Writing chunk ${i} (of ${repoChunks.length}) conf file mapping to file...`);
+        fs.writeFileSync(`./${dir}/yaml-file-mapping-${i}of${repoChunks.length}.json`, JSON.stringify(yamlFiles));
+        console.log('Done.');
+
+        console.log(`Taking a break. Sleepng for half an hour to avoid triggering github's abuse policy.`)
+	await sleep(1800000);
+    }
 }
 
 async function analyze(dir) {
