@@ -375,7 +375,7 @@ async function fullRun() {
     console.log(`After filtering out duplicates, have a total of ${repos.length} repos.`);
 
     console.log('Writing all collected repos to file...');
-    fs.writeFileSync(`./${dir}/all-repos.json`, JSON.stringify(repos));
+    fs.writeFileSync(`./collected-data/${dir}/all-repos.json`, JSON.stringify(repos));
     console.log('Done.');
 
     const repoChunks = Array(Math.ceil(repos.length / 250))
@@ -389,11 +389,11 @@ async function fullRun() {
         const { slsRepos, yamlFiles } = await collectSlsFiles(chunk);
 
         console.log(`Writing chunk ${i} (of ${repoChunks.length}) sls repos to file...`);
-        fs.writeFileSync(`./${dir}/sls-repos-${i}of${repoChunks.length}.json`, JSON.stringify(slsRepos));
+        fs.writeFileSync(`./collected-data/${dir}/sls-repos-${i}of${repoChunks.length}.json`, JSON.stringify(slsRepos));
         console.log('Done.');
 
         console.log(`Writing chunk ${i} (of ${repoChunks.length}) conf file mapping to file...`);
-        fs.writeFileSync(`./${dir}/yaml-file-mapping-${i}of${repoChunks.length}.json`, JSON.stringify(yamlFiles));
+        fs.writeFileSync(`./collected-data/${dir}/yaml-file-mapping-${i}of${repoChunks.length}.json`, JSON.stringify(yamlFiles));
         console.log('Done.');
 
         console.log(`Taking a break. Sleepng for half an hour to avoid triggering github's abuse policy.`)
@@ -402,8 +402,8 @@ async function fullRun() {
 }
 
 async function analyze(dir) {
-    const repos = JSON.parse(fs.readFileSync(`./${dir}/sls-repos.json`));
-    const yamlMapping = JSON.parse(fs.readFileSync(`./${dir}/yaml-file-mapping.json`));
+    const repos = JSON.parse(fs.readFileSync(`./collected-data/${dir}/sls-repos.json`));
+    const yamlMapping = JSON.parse(fs.readFileSync(`./collected-data/${dir}/yaml-file-mapping.json`));
 
     const res = repos.map(repo => ({repo, files: (yamlMapping.find(elem => elem.id === repo.id)).files }))
           .filter(({ repo, files }) =>  files.some(file => {try {yaml.parse(file); return true;} catch (err) {return false;}} ) )
@@ -427,7 +427,7 @@ async function analyze(dir) {
                                      }));
 
     console.log('Writing data to file...');
-    fs.writeFileSync(`./${dir}/data.json`, JSON.stringify(repos));
+    fs.writeFileSync(`./collected-data/${dir}/data.json`, JSON.stringify(repos));
     console.log('Done.');
 
 }
