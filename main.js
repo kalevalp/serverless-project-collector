@@ -355,6 +355,7 @@ module.exports.analyze = analyze;
 
 async function fullRun() {
     const dir = `run-${getTimestampString()}`;
+    fs.mkdirSync(`./collected-data/${dir}`, {recursive: true});
 
     // Full flow
     let repos = [];
