@@ -80,7 +80,7 @@
                 "title": "Cloud providers declared in this project",
                 "items": {
                     "$id": "#/items/properties/providers/items",
-                    "type": "array",
+                    "type": "string",
                     "title": "The name of a cloud provider"
                 }
             },
@@ -95,7 +95,7 @@
                 "title": "The Resources declared in this project",
                 "items": {
                     "$id": "#/items/properties/resources/items",
-                    "type": "array",
+                    "type": "string",
                     "title": "An AWS (probably) resource"
                 }
             },

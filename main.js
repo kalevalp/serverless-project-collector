@@ -3,6 +3,7 @@ const aws = require('aws-sdk');
 const fs = require('fs');
 const _ = require('lodash');
 const yaml = require('yaml');
+const validateSchema = require('jsonschema').validate;
 const { parse } = require('json2csv');
 
 const githubToken = process.env.GITHUB_API_TOKEN;
@@ -452,7 +453,7 @@ ${expectedFileCount !== yamlMappingFiles.length ? 'YAML mapping chunk files' : '
           .map(({ repo, files }) => ({id: repo.id,
                                       full_name: repo.full_name,
                                       html_url: repo.html_url,
-                                      description: repo.description,
+                                      description: repo.description ? repo.description : '',
                                       ssh_url: repo.ssh_url,
                                       clone_url: repo.clone_url,
                                       stargazers_count: repo.stargazers_count,
@@ -460,12 +461,16 @@ ${expectedFileCount !== yamlMappingFiles.length ? 'YAML mapping chunk files' : '
                                       forks_count: repo.forks_count,
                                       fork: repo.fork,
                                       providers: _.uniq(files.filter(file => file && file.provider && file.provider.name)
-                                                        .map(file => file.provider.name)),
+                                                        .map(file => file.provider.name)
+                                                        .filter(prov => prov)
+                                                        .filter(prov => (typeof prov) === 'string')
+                                                       ),
                                       function_count: files.map(file => file && file.functions ? Object.keys(file.functions).length : 0).reduce((a,b) => a + b, 0),
                                       resources: _.uniq(files.filter(file => file && file.resources && file.resources.Resources)
                                                         .map(file => Object.values(file.resources.Resources).map(elem => elem.Type))
-                                                        .flat()),
-                                      files
+                                                        .flat()
+                                                        .filter(resource => resource)),
+                                      files: files.filter(f => f).filter(f => (typeof f) === 'object').filter(f => !Array.isArray(f)),
                                      }));
 
     console.log('Writing data to file...');
@@ -491,6 +496,20 @@ ${expectedFileCount !== yamlMappingFiles.length ? 'YAML mapping chunk files' : '
 async function increment(dir) {}
 
 async function recover(dir) {}
+
+async function validate(dir) {
+    const schema = JSON.parse(fs.readFileSync('schema.json'));
+    const data = JSON.parse(fs.readFileSync(`${dir}/data.json`));
+    const validationResult = validateSchema(data, schema);
+
+    if (validationResult.errors.length === 0) {
+        console.log('Collected data was validated successfully!');
+    } else {
+        console.log('There were validation errors!');
+        debugger;
+        console.log(validationResult.errors);
+    }
+}
 
 if (require.main === module) {
 
@@ -529,6 +548,16 @@ if (require.main === module) {
 		     })
 		 },
 		 (argv) => recover(argv.dir)
+		)
+	.command(['validate <dir>', 'v'],
+		 'Validate the produced data.json file against the json schema',
+		 (yargs) => {
+		     yargs.positional('dir', {
+			 describe: 'A directory containing the analyzed data',
+			 type: 'string'
+		     })
+		 },
+		 (argv) => validate(argv.dir)
 		)
 	.alias('h','help')
 	.argv;
