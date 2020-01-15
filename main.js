@@ -393,12 +393,12 @@ async function fullRun() {
 
         const { slsRepos, yamlFiles } = await collectSlsFiles(chunk);
 
-        console.log(`Writing chunk ${i} (of ${repoChunks.length}) sls repos to file...`);
-        fs.writeFileSync(`./collected-data/${dir}/sls-repos-${i}of${repoChunks.length}.json`, JSON.stringify(slsRepos));
+        console.log(`Writing chunk ${i+1} (of ${repoChunks.length}) sls repos to file...`);
+        fs.writeFileSync(`./collected-data/${dir}/sls-repos-${i+1}of${repoChunks.length}.json`, JSON.stringify(slsRepos));
         console.log('Done.');
 
-        console.log(`Writing chunk ${i} (of ${repoChunks.length}) conf file mapping to file...`);
-        fs.writeFileSync(`./collected-data/${dir}/yaml-file-mapping-${i}of${repoChunks.length}.json`, JSON.stringify(yamlFiles));
+        console.log(`Writing chunk ${i+1} (of ${repoChunks.length}) conf file mapping to file...`);
+        fs.writeFileSync(`./collected-data/${dir}/yaml-file-mapping-${i+1}of${repoChunks.length}.json`, JSON.stringify(yamlFiles));
         console.log('Done.');
 
         console.log(`Taking a break. Sleepng for half an hour to avoid triggering github's abuse policy.`)
