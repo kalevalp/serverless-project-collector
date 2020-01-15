@@ -467,7 +467,7 @@ ${expectedFileCount !== yamlMappingFiles.length ? 'YAML mapping chunk files' : '
                                      }));
 
     console.log('Writing data to file...');
-    fs.writeFileSync(`${dir}/data.json`, JSON.stringify(repos));
+    fs.writeFileSync(`${dir}/data.json`, JSON.stringify(res));
     console.log('Done.');
 
 
