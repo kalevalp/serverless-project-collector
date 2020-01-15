@@ -354,8 +354,12 @@ module.exports.collectSlsFiles = collectSlsFiles;
 module.exports.analyze = analyze;
 
 async function fullRun() {
-    const dir = `run-${getTimestampString()}`;
+    const tstamp = getTimestampString();
+    const dirnametstamp = tstamp.split(':').join('');
+
+    const dir = `run-${dirnametstamp}`;
     fs.mkdirSync(`./collected-data/${dir}`, {recursive: true});
+    fs.writeFileSync(`./collected-data/${dir}/timestamp`,tstamp);
 
     // Full flow
     let repos = [];
