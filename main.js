@@ -89,7 +89,7 @@ function httpCallerBuilder(threshold) {
 		retries--;
 		console.log(`Retrying. Retries remaining: ${retries}`);
             }
-	} 
+	}
 	console.log('Failed 5 retries. Exiting!');
 	process.exit(1);
     }
@@ -407,8 +407,43 @@ async function fullRun() {
 }
 
 async function analyze(dir) {
-    const repos = JSON.parse(fs.readFileSync(`./collected-data/${dir}/sls-repos.json`));
-    const yamlMapping = JSON.parse(fs.readFileSync(`./collected-data/${dir}/yaml-file-mapping.json`));
+    const files = fs.readdirSync(dir);
+
+    const repoFiles = files.filter(fname => fname.match(/sls-repos-\d+of\d+.json/));
+    const yamlMappingFiles = files.filter(fname => fname.match(/yaml-file-mapping-\d+of\d+.json/));
+
+    // Sanity check that we have the expected number of files here
+    if (repoFiles.length === 0 ||
+        yamlMappingFiles.length === 0) {
+        console.log('ERROR, run directory', dir, 'missing reult files! Exiting...');
+        process.exit(1);
+    }
+
+    const expectedFileCount = Number(repoFiles[0].match(/sls-repos-\d+of(\d+).json/)[1]);
+
+    console.log(`
+Expecting ${expectedFileCount} chunk files.
+  Found ${repoFiles.length} repo chunk files,
+  and ${yamlMappingFiles.length} YAML mapping chunk files.`);
+
+
+    if ((expectedFileCount !== repoFiles.length) ||
+        (expectedFileCount !== yamlMappingFiles.length)) {
+        console.log(`
+WARNING: Number of ${expectedFileCount !== repoFiles.length ? 'repo chunk files' : ''}\
+${expectedFileCount !== repoFiles.length && expectedFileCount !== yamlMappingFiles.length ? ' and ' : ''}\
+${expectedFileCount !== yamlMappingFiles.length ? 'YAML mapping chunk files' : ''} does not match expectation.`);
+    }
+
+    const repos = repoFiles
+          .map(file => fs.readFileSync(`${dir}/${file}`))
+          .map(content => JSON.parse(content))
+          .flat();
+
+    const yamlMapping = yamlMappingFiles
+          .map(file => fs.readFileSync(`${dir}/${file}`))
+          .map(content => JSON.parse(content))
+          .flat();
 
     const res = repos.map(repo => ({repo, files: (yamlMapping.find(elem => elem.id === repo.id)).files }))
           .filter(({ repo, files }) =>  files.some(file => {try {yaml.parse(file); return true;} catch (err) {return false;}} ) )
@@ -483,5 +518,3 @@ if (require.main === module) {
 	.argv;
 
 }
-
-
