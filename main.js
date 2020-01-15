@@ -476,7 +476,7 @@ ${expectedFileCount !== yamlMappingFiles.length ? 'YAML mapping chunk files' : '
     const opts = { fields };
 
     try {
-        const csv = parse(repos, opts);
+        const csv = parse(res, opts);
 
         console.log('Writing data to csv file...');
         fs.writeFileSync(`${dir}/data.csv`, csv);
