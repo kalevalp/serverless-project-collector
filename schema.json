@@ -1,0 +1,114 @@
+{
+    "definitions": {},
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://raw.githubusercontent.com/kalevalp/serverless-project-collector/master/schema.json",
+    "type": "array",
+    "title": "List of Serverless Projects",
+    "items": {
+        "$id": "#/items",
+        "type": "object",
+        "title": "A Serverless Project",
+        "required": [
+            "id",
+            "full_name",
+            "html_url",
+            "description",
+            "ssh_url",
+            "clone_url",
+            "stargazers_count",
+            "watchers_count",
+            "forks_count",
+            "fork",
+            "function_count",
+            "resources",
+            "files"
+        ],
+        "properties": {
+            "id": {
+                "$id": "#/items/properties/id",
+                "type": "integer",
+                "title": "Project Github id"
+            },
+            "full_name": {
+                "$id": "#/items/properties/full_name",
+                "type": "string",
+                "title": "Project full name"
+            },
+            "html_url": {
+                "$id": "#/items/properties/html_url",
+                "type": "string",
+                "title": "Github url"
+            },
+            "description": {
+                "$id": "#/items/properties/description",
+                "type": "string",
+                "title": "Project description"
+            },
+            "ssh_url": {
+                "$id": "#/items/properties/ssh_url",
+                "type": "string",
+                "title": "ssh clone url"
+            },
+            "clone_url": {
+                "$id": "#/items/properties/clone_url",
+                "type": "string",
+                "title": "https clone url"
+            },
+            "stargazers_count": {
+                "$id": "#/items/properties/stargazers_count",
+                "type": "integer",
+                "title": "number of stars the project has on github"
+            },
+            "watchers_count": {
+                "$id": "#/items/properties/watchers_count",
+                "type": "integer",
+                "title": "number of watchers the project has on github"
+            },
+            "forks_count": {
+                "$id": "#/items/properties/forks_count",
+                "type": "integer",
+                "title": "number of forks the project has on github"
+            },
+            "fork": {
+                "$id": "#/items/properties/fork",
+                "type": "boolean",
+                "title": "Is this project a fork?"
+            },
+            "providers": {
+                "$id": "#/items/properties/providers",
+                "type": "array",
+                "title": "Cloud providers declared in this project",
+                "items": {
+                    "$id": "#/items/properties/providers/items",
+                    "type": "array",
+                    "title": "The name of a cloud provider"
+                }
+            },
+            "function_count": {
+                "$id": "#/items/properties/function_count",
+                "type": "integer",
+                "title": "Number of serverless functions in this project"
+            },
+            "resources": {
+                "$id": "#/items/properties/resources",
+                "type": "array",
+                "title": "The Resources declared in this project",
+                "items": {
+                    "$id": "#/items/properties/resources/items",
+                    "type": "array",
+                    "title": "An AWS (probably) resource"
+                }
+            },
+            "files": {
+                "$id": "#/items/properties/files",
+                "type": "array",
+                "title": "Yaml Files",
+                "items": {
+                    "$id": "#/items/properties/files/items",
+                    "type": "object",
+                    "title": "Parsed yaml file"
+                }
+            }
+        }
+    }
+}
