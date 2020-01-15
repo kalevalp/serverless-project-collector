@@ -459,6 +459,8 @@ ${expectedFileCount !== yamlMappingFiles.length ? 'YAML mapping chunk files' : '
                                       watchers_count: repo.watchers_count,
                                       forks_count: repo.forks_count,
                                       fork: repo.fork,
+                                      providers: _.uniq(files.filter(file => file && file.provider && file.provider.name)
+                                                        .map(file => file.provider.name)),
                                       function_count: files.map(file => file && file.functions ? Object.keys(file.functions).length : 0).reduce((a,b) => a + b, 0),
                                       resources: _.uniq(files.filter(file => file && file.resources && file.resources.Resources)
                                                         .map(file => Object.values(file.resources.Resources).map(elem => elem.Type))
@@ -470,9 +472,7 @@ ${expectedFileCount !== yamlMappingFiles.length ? 'YAML mapping chunk files' : '
     fs.writeFileSync(`${dir}/data.json`, JSON.stringify(res));
     console.log('Done.');
 
-
-
-    const fields = ['id', 'full_name', 'html_url', 'description', 'ssh_url', 'clone_url', 'stargazers_count', 'watchers_count', 'forks_count', 'fork', 'function_count', 'resources'];
+    const fields = ['id', 'full_name', 'html_url', 'description', 'ssh_url', 'clone_url', 'stargazers_count', 'watchers_count', 'forks_count', 'fork', 'providers', 'function_count', 'resources'];
     const opts = { fields };
 
     try {
@@ -485,6 +485,7 @@ ${expectedFileCount !== yamlMappingFiles.length ? 'YAML mapping chunk files' : '
     } catch (err) {
         console.error(err);
     }
+
 }
 
 async function increment(dir) {}
