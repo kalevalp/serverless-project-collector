@@ -467,7 +467,7 @@ ${expectedFileCount !== yamlMappingFiles.length ? 'YAML mapping chunk files' : '
                                      }));
 
     console.log('Writing data to file...');
-    fs.writeFileSync(`./collected-data/${dir}/data.json`, JSON.stringify(repos));
+    fs.writeFileSync(`${dir}/data.json`, JSON.stringify(repos));
     console.log('Done.');
 
 
@@ -476,17 +476,15 @@ ${expectedFileCount !== yamlMappingFiles.length ? 'YAML mapping chunk files' : '
     const opts = { fields };
 
     try {
-        const csv = parse(repos[0], opts);
+        const csv = parse(repos, opts);
 
         console.log('Writing data to csv file...');
-        fs.writeFileSync(`./collected-data/${dir}/data.csv`, csv);
+        fs.writeFileSync(`${dir}/data.csv`, csv);
         console.log('Done.');
 
     } catch (err) {
         console.error(err);
     }
-
-
 }
 
 async function increment(dir) {}
