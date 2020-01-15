@@ -3,7 +3,7 @@ const aws = require('aws-sdk');
 const fs = require('fs');
 const _ = require('lodash');
 const yaml = require('yaml');
-
+const { parse } = require('json2csv');
 
 const githubToken = process.env.GITHUB_API_TOKEN;
 const verbose = process.env.PROJECT_COLLECTOR_VERBOSE;
@@ -469,6 +469,23 @@ ${expectedFileCount !== yamlMappingFiles.length ? 'YAML mapping chunk files' : '
     console.log('Writing data to file...');
     fs.writeFileSync(`./collected-data/${dir}/data.json`, JSON.stringify(repos));
     console.log('Done.');
+
+
+
+    const fields = ['id', 'full_name', 'html_url', 'description', 'ssh_url', 'clone_url', 'stargazers_count', 'watchers_count', 'forks_count', 'fork', 'function_count', 'resources'];
+    const opts = { fields };
+
+    try {
+        const csv = parse(repos[0], opts);
+
+        console.log('Writing data to csv file...');
+        fs.writeFileSync(`./collected-data/${dir}/data.csv`, csv);
+        console.log('Done.');
+
+    } catch (err) {
+        console.error(err);
+    }
+
 
 }
 
